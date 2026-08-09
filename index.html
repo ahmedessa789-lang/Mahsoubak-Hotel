@@ -144,13 +144,8 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#78aeb4;box-sh
 <label>اسم المستخدم / Username</label><input name="username" value="admin" required><br><br>
 <label>كلمة المرور / Password</label><input type="password" name="password" value="" required><br><br>
 <button class="primary" style="width:100%">دخول / Login</button></form>
-<div id="diagBox" style="margin-top:14px;padding:12px;border:1px solid #d1d5db;border-radius:10px;background:#f8fafc;font-size:12px;line-height:1.8">
-  <div style="display:flex;justify-content:space-between;gap:8px;align-items:center">
-    <b>تشخيص الاتصال</b>
-    <button type="button" id="runDiagBtn" style="width:auto;padding:6px 10px;border:1px solid #cbd5e1;background:#fff;border-radius:8px;cursor:pointer">اختبار الآن</button>
-  </div>
-  <div id="diagStatus" style="margin-top:8px;white-space:pre-wrap">لم يتم الاختبار بعد.</div>
-</div>
+<button type="button" id="diagBtnV2" style="width:100%;margin-top:10px">اختبار اتصال Supabase</button>
+<pre id="diagOutV2" style="white-space:pre-wrap;text-align:left;direction:ltr;font-size:11px;margin-top:10px"></pre>
 </div></div>
 <div id="appView" class="app hidden">
 <aside><h1 id="brand">محسوبك للفنادق<br><small style="font-size:11px;color:#64748b;margin-right:48px">Mahsoobak Hotel ERP</small></h1>
@@ -383,7 +378,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#78aeb4;box-sh
 <div id="roomDetailsContent"></div>
 </div></div>
 <div id="modal" class="modal"><div class="box"><h3 id="modalTitle"></h3><form id="genericForm"><div id="formFields" class="grid"></div><div id="extraArea"></div><div class="actions"><button class="primary">حفظ</button><button type="button" onclick="closeModal()">إلغاء</button></div></form></div></div>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/dist/umd/supabase.min.js"></script>
 <script>
 let me=null,lang='ar',edit=null,cache={};
 
@@ -433,70 +428,58 @@ function goToRoomsByStatus(status){
 
 const SUPABASE_URL='https://bukflkzhrnlbfdysgyuo.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY='sb_publishable_POCsj3GoHSelETkRyB_FsQ_T1qpmnPU';
-const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
-const signupSb=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false},global:{headers:{'x-client-info':'mahsoobak-hotel-admin-signup'}}});
+const SUPABASE_FETCH = (...args) => globalThis.fetch(...args);
+if(!window.supabase || typeof window.supabase.createClient!=='function'){
+  throw new Error('تعذر تحميل مكتبة Supabase JS من CDN');
+}
+const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,{
+  auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false},
+  global:{fetch:SUPABASE_FETCH,headers:{'x-client-info':'mahsoobak-hotel-web'}}
+});
+const signupSb=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,{
+  auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false},
+  global:{fetch:SUPABASE_FETCH,headers:{'x-client-info':'mahsoobak-hotel-admin-signup'}}
+});
 
-const DIAG = {
-  lines: [],
-  push(msg, ok=null){
-    const icon = ok===true ? '✅' : ok===false ? '❌' : 'ℹ️';
-    this.lines.push(`${icon} ${msg}`);
-    if(window.diagStatus) diagStatus.textContent=this.lines.join('\n');
-  },
-  reset(){ this.lines=[]; if(window.diagStatus) diagStatus.textContent='جارِ الاختبار...'; }
-};
-
-async function runDiagnostics(){
-  DIAG.reset();
-
-  // A) Supabase JS library
-  const libOk = !!(window.supabase && typeof window.supabase.createClient==='function');
-  DIAG.push(`تحميل مكتبة Supabase JS: ${libOk ? 'ناجح' : 'فشل'}`, libOk);
-  if(!libOk) return;
-
-  DIAG.push(`Project URL المستخدم: ${SUPABASE_URL}`, null);
-
-  // B) DNS/network reachability via Auth settings endpoint
-  try{
-    const r = await fetch(`${SUPABASE_URL}/auth/v1/settings`, {
-      method:'GET',
-      headers:{'apikey':SUPABASE_PUBLISHABLE_KEY},
-      cache:'no-store'
-    });
-    DIAG.push(`الوصول إلى Supabase Auth: HTTP ${r.status}`, r.ok || r.status===401 || r.status===403);
-  }catch(e){
-    DIAG.push(`فشل الوصول إلى Supabase Auth: ${e?.name||'Error'} - ${e?.message||String(e)}`, false);
-  }
-
-  // C) Data API reachability
-  try{
-    const r = await fetch(`${SUPABASE_URL}/rest/v1/`, {
-      method:'GET',
-      headers:{
-        'apikey':SUPABASE_PUBLISHABLE_KEY,
-        'Authorization':`Bearer ${SUPABASE_PUBLISHABLE_KEY}`
-      },
-      cache:'no-store'
-    });
-    DIAG.push(`الوصول إلى Data API: HTTP ${r.status}`, r.ok || r.status===401 || r.status===403 || r.status===404);
-  }catch(e){
-    DIAG.push(`فشل الوصول إلى Data API: ${e?.name||'Error'} - ${e?.message||String(e)}`, false);
-  }
-
-  // D) Supabase SDK session check
-  try{
-    const {data,error}=await sb.auth.getSession();
-    if(error) DIAG.push(`فحص Session: ${error.message}`, false);
-    else DIAG.push(`فحص Session: الاتصال بالـSDK ناجح${data?.session?' ويوجد Session محفوظ':' ولا يوجد Session محفوظ'}`, true);
-  }catch(e){
-    DIAG.push(`فحص Session فشل: ${e?.message||String(e)}`, false);
-  }
-
-  DIAG.push('بعد الاختبار جرّب Login. لو فشل، الرسالة التالية ستوضح هل المشكلة Network أم Auth.', null);
+function detailedError(e,stage='Supabase'){
+  const parts=[
+    stage,
+    e?.name ? 'name='+e.name : '',
+    e?.status ? 'status='+e.status : '',
+    e?.code ? 'code='+e.code : '',
+    e?.message ? 'message='+e.message : '',
+    e?.details ? 'details='+e.details : '',
+    e?.hint ? 'hint='+e.hint : ''
+  ].filter(Boolean);
+  return parts.join(' | ');
 }
 
-if(window.runDiagBtn) runDiagBtn.onclick=runDiagnostics;
-setTimeout(()=>{ if(window.diagStatus) runDiagnostics(); }, 500);
+async function runSupabaseDiagnostic(){
+  const result={sdk:false,auth:false,data:false,session:false,details:[]};
+  result.sdk=!!(window.supabase&&window.supabase.createClient);
+  result.details.push('SDK: '+(result.sdk?'OK':'FAILED'));
+  try{
+    const {data,error}=await sb.auth.getSession();
+    if(error) throw error;
+    result.auth=true;
+    result.session=!!data?.session;
+    result.details.push('Auth endpoint: OK; session='+(result.session?'YES':'NO'));
+  }catch(e){ result.details.push(detailedError(e,'Auth endpoint')); }
+  try{
+    const {data,error}=await sb.from('profiles').select('id').limit(1);
+    if(error){
+      // A 401/403/PostgREST/RLS response still proves network/API connectivity.
+      if(error.code || error.status){
+        result.data=true;
+        result.details.push('Data API reachable; DB response: '+detailedError(error,'profiles'));
+      } else throw error;
+    }else{
+      result.data=true;
+      result.details.push('Data API: OK; rows='+(data?.length||0));
+    }
+  }catch(e){ result.details.push(detailedError(e,'Data API')); }
+  return result;
+}
 
 
 function apiErr(e){throw Error(e?.message||e?.details||e?.hint||String(e||'Error'))}
@@ -698,22 +681,26 @@ try{
   showApp();
   loadAll();
 }catch(x){
-  const msg = x?.message || String(x);
-  let hint = '';
-  if(/failed to fetch|network|load failed/i.test(msg)){
-    hint = '\n\nالتشخيص: الطلب لم يصل إلى Supabase. اضغط \"اختبار الآن\" وانسخ النتيجة.';
-  }else if(/invalid login credentials/i.test(msg)){
-    hint = '\n\nالتشخيص: الاتصال ناجح لكن البريد/كلمة المرور غير صحيحين.';
-  }else if(/email not confirmed/i.test(msg)){
-    hint = '\n\nالتشخيص: الاتصال ناجح لكن البريد يحتاج تأكيد.';
-  }else{
-    hint = '\n\nالتشخيص: الاتصال وصل إلى Supabase لكن رجع خطأ آخر.';
+  let extra='';
+  try{
+    const d=await runSupabaseDiagnostic();
+    extra='\n\nتشخيص الاتصال:\n'+d.details.join('\n');
+  }catch(diagErr){
+    extra='\n\nDiagnostic failed: '+detailedError(diagErr,'diagnostic');
   }
-  if(window.diagStatus){
-    diagStatus.textContent += `\n\n❌ نتيجة محاولة الدخول: ${msg}${hint}`;
-  }
-  alert(msg + hint);
+  alert('Login failed: '+detailedError(x,'login')+extra);
 }
+}
+if(window.diagBtnV2){
+diagBtnV2.onclick=async()=>{
+  diagOutV2.textContent='Testing...';
+  try{
+    const d=await runSupabaseDiagnostic();
+    diagOutV2.textContent=d.details.join('\n');
+  }catch(e){
+    diagOutV2.textContent=detailedError(e,'diagnostic');
+  }
+};
 }
 logoutBtn.onclick=async()=>{await api('/api/logout',{method:'POST'});showLogin()}
 document.querySelectorAll('.nav').forEach(b=>b.onclick=()=>{document.querySelectorAll('.nav').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.getElementById(b.dataset.page).classList.add('active');pageTitle.textContent=b.textContent})
