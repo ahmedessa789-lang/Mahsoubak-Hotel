@@ -1,0 +1,935 @@
+<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>محسوبك للفنادق | لوحة التحكم</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Tahoma,Arial;background:#f4f6f9;color:#1f2937}.hidden{display:none!important}
+.login{min-height:100vh;display:flex;align-items:center;justify-content:center;background:#111827}.loginbox{width:360px;background:#fff;padding:26px;border-radius:16px}
+.app{display:flex;min-height:100vh}aside{width:245px;background:#111827;color:#fff;padding:16px;position:fixed;right:0;top:0;bottom:0;overflow:auto}html[dir=ltr] aside{right:auto;left:0}
+aside h1{font-size:20px}.nav{width:100%;border:0;background:transparent;color:#d1d5db;padding:11px;border-radius:8px;margin:3px 0;text-align:inherit;cursor:pointer}.nav.active,.nav:hover{background:#2563eb;color:#fff}
+main{margin-right:245px;width:calc(100% - 245px);padding:20px}html[dir=ltr] main{margin-right:0;margin-left:245px}
+.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}.page{display:none}.page.active{display:block}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}.card,.panel{background:#fff;border-radius:14px;padding:16px;box-shadow:0 4px 14px rgba(0,0,0,.06)}.card b{display:block;font-size:26px;margin-top:8px}
+.toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}.primary,.edit,.danger,.success,.warn{border:0;color:#fff;padding:8px 11px;border-radius:8px;cursor:pointer}.primary{background:#2563eb}.edit{background:#7c3aed}.danger{background:#dc2626}.success{background:#059669}.warn{background:#d97706}
+table{width:100%;border-collapse:collapse;background:#fff}th,td{padding:10px;border-bottom:1px solid #e5e7eb;text-align:inherit;font-size:13px}th{background:#f8fafc}
+.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);align-items:center;justify-content:center;z-index:20}.modal.open{display:flex}.box{background:#fff;width:min(880px,94vw);max-height:92vh;overflow:auto;padding:20px;border-radius:14px}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}label{display:block;font-size:12px;margin-bottom:4px;color:#475569}input,select,textarea{width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:8px}.actions{display:flex;gap:8px;margin-top:14px}.svcrow{display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:7px;margin:6px 0}
+@media(max-width:800px){aside{width:190px}main{margin-right:190px;width:calc(100% - 190px)}html[dir=ltr] main{margin-left:190px}.grid{grid-template-columns:1fr}}
+
+.finance-nav{display:grid;grid-template-columns:repeat(4,minmax(150px,1fr));gap:10px;margin-bottom:14px}
+.finance-nav button{border:1px solid #d1d5db;background:#fff;padding:14px;border-radius:12px;font-weight:700;cursor:pointer}
+.finance-nav button.active,.finance-nav button:hover{background:#0f766e;color:#fff;border-color:#0f766e}
+.finance-pane{display:none}.finance-pane.active{display:block}
+.finance-kpis{display:grid;grid-template-columns:repeat(4,minmax(150px,1fr));gap:10px;margin-bottom:14px}
+.finance-kpis .card b{display:block;font-size:22px;margin-top:6px}
+.filter-row{display:flex;gap:8px;align-items:end;flex-wrap:wrap;margin-bottom:12px}.filter-row>div{min-width:160px}
+@media(max-width:900px){.finance-nav{grid-template-columns:repeat(2,1fr)}.finance-kpis{grid-template-columns:repeat(2,1fr)}}
+
+.room-map-tabs{display:flex;gap:8px;margin-bottom:14px}
+.room-map-tabs button{padding:9px 16px;border:1px solid #cbd5e1;background:white;border-radius:9px;cursor:pointer}
+.room-map-tabs button.active{background:#2563eb;color:white;border-color:#2563eb}
+.room-map-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px}
+.room-card{background:white;border-radius:14px;padding:15px;box-shadow:0 4px 14px rgba(0,0,0,.07);border:3px solid transparent;cursor:pointer;transition:.15s}
+.room-card:hover{transform:translateY(-2px)}
+.room-card.available{border-color:#22c55e}.room-card.reserved{border-color:#f59e0b}.room-card.occupied{border-color:#ef4444}.room-card.cleaning{border-color:#3b82f6}.room-card.maintenance{border-color:#6b7280}
+.room-head{display:flex;justify-content:space-between;align-items:center}.room-title{font-size:18px;font-weight:700}.room-status{font-size:12px;padding:4px 8px;border-radius:999px;background:#f1f5f9}
+.room-meta{font-size:13px;color:#64748b;margin-top:8px}.room-guest{margin-top:10px;padding-top:10px;border-top:1px solid #e5e7eb}
+.room-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px}
+.room-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0}.room-summary div{background:#f8fafc;padding:10px;border-radius:9px;text-align:center}
+
+.print-btn{border:1px solid #94a3b8;background:#fff;color:#111827;padding:8px 12px;border-radius:8px;cursor:pointer}
+.owner-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+.owner-card{background:#fff;border-radius:14px;padding:16px;box-shadow:0 4px 14px rgba(0,0,0,.06)}
+.owner-card b{display:block;font-size:24px;margin-top:7px}
+.owner-section{background:#fff;border-radius:14px;padding:16px;margin-top:14px;box-shadow:0 4px 14px rgba(0,0,0,.06)}
+.owner-two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.cashflow-kpis{display:grid;grid-template-columns:repeat(5,minmax(150px,1fr));gap:10px;margin-bottom:14px}
+.cashflow-kpis .card b{display:block;font-size:22px;margin-top:6px}
+@media(max-width:900px){.owner-two{grid-template-columns:1fr}.cashflow-kpis{grid-template-columns:repeat(2,1fr)}}
+@media print{
+  body *{visibility:hidden!important}
+  .print-area,.print-area *{visibility:visible!important}
+  .print-area{position:absolute!important;left:0!important;top:0!important;width:100%!important;background:#fff!important}
+  .no-print{display:none!important}
+}
+
+.clickable-card{cursor:pointer;transition:.15s}
+.clickable-card:hover{transform:translateY(-2px);box-shadow:0 8px 18px rgba(0,0,0,.10)}
+.balance-sheet-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.balance-total{font-size:17px;font-weight:700;background:#f8fafc}
+@media(max-width:850px){.balance-sheet-grid{grid-template-columns:1fr}}
+
+:root{
+  --bg:#f5f7fa;
+  --surface:#ffffff;
+  --surface-2:#f9fbfc;
+  --text:#1f2937;
+  --muted:#6b7280;
+  --line:#e5e7eb;
+  --primary:#1f6f78;
+  --primary-dark:#15545b;
+  --teal-soft:#e5f4f4;
+  --blue-soft:#eaf2ff;
+  --green-soft:#eaf7ef;
+  --amber-soft:#fff4e2;
+  --red-soft:#fff0f0;
+  --purple-soft:#f2ebfb;
+  --shadow:0 8px 24px rgba(15,23,42,.06);
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:"Segoe UI",Tahoma,Arial,sans-serif}
+.app{background:var(--bg)}
+aside{
+  width:250px;background:var(--surface);color:var(--text);padding:20px 14px;
+  border-left:1px solid var(--line);box-shadow:-4px 0 18px rgba(15,23,42,.03)
+}
+html[dir=ltr] aside{border-left:0;border-right:1px solid var(--line)}
+aside h1{font-size:20px;color:var(--primary);padding:4px 12px 18px;border-bottom:1px solid var(--line);margin:0 0 14px}
+aside h1:before{content:"▦";display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;background:var(--teal-soft);border-radius:10px;margin-left:10px;color:var(--primary)}
+.nav{color:#475569;padding:12px 14px;border-radius:10px;margin:4px 0;font-weight:600;display:flex;align-items:center;gap:10px}
+.nav:before{content:"•";font-size:18px;color:#94a3b8}
+.nav.active,.nav:hover{background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;box-shadow:0 8px 18px rgba(31,111,120,.18)}
+.nav.active:before,.nav:hover:before{color:#fff}
+main{padding:18px 22px 28px}
+.top{
+  background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px 18px;
+  box-shadow:var(--shadow);margin-bottom:18px;align-items:center
+}
+.top h2{margin:0 0 5px;font-size:25px}.top small{color:var(--muted)}
+.top button{border:1px solid var(--line);background:#fff;border-radius:9px;padding:8px 12px;color:#334155}
+.card,.panel,.owner-card,.owner-section{border:1px solid var(--line);box-shadow:var(--shadow);border-radius:16px;background:var(--surface)}
+.stats{gap:14px}
+.card{padding:18px;position:relative;overflow:hidden}
+.card:after{content:"";position:absolute;width:70px;height:70px;border-radius:50%;background:var(--teal-soft);left:14px;top:16px;opacity:.9}
+.card b{font-size:28px;color:#111827;position:relative;z-index:1}
+.card:nth-child(2):after{background:var(--green-soft)}
+.card:nth-child(3):after{background:var(--purple-soft)}
+.card:nth-child(4):after{background:var(--blue-soft)}
+.card:nth-child(5):after{background:var(--amber-soft)}
+.card:nth-child(6):after{background:var(--teal-soft)}
+.toolbar{margin-bottom:14px}.toolbar h3,.toolbar h4{margin:0}
+.primary{background:var(--primary)}.primary:hover{background:var(--primary-dark)}
+.edit{background:#64748b}.danger{background:#c75c5c}.success{background:#3f8f6b}.warn{background:#c68a3a}
+table{border:1px solid var(--line);border-radius:12px;overflow:hidden}
+th{background:#f8fafc;color:#475569;font-weight:700}td,th{padding:12px 11px}
+.room-map-grid{grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px}
+.room-card{border:1px solid var(--line)!important;box-shadow:none;background:var(--surface-2)}
+.room-card.available{background:#f3fbf6;border-color:#cfe9d8!important}
+.room-card.reserved{background:#f3f7ff;border-color:#d3e2fb!important}
+.room-card.occupied{background:#fff5f5;border-color:#f2d1d1!important}
+.room-card.cleaning{background:#fff9ef;border-color:#f1dfba!important}
+.room-card.maintenance{background:#f5f6f8;border-color:#d8dce2!important}
+.room-title{font-size:17px}.room-status{background:#fff;border:1px solid var(--line)}
+.finance-nav{grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
+.finance-nav button{border:1px solid var(--line);box-shadow:none;color:#475569}
+.finance-nav button.active,.finance-nav button:hover{background:var(--primary);border-color:var(--primary)}
+.owner-grid{gap:14px}.owner-card{padding:18px}.owner-card b{font-size:27px}
+.clickable-card:hover{transform:translateY(-3px);box-shadow:0 14px 26px rgba(15,23,42,.10)}
+.modal{backdrop-filter:blur(3px)}.box{border-radius:18px;border:1px solid var(--line);box-shadow:0 24px 50px rgba(15,23,42,.18)}
+input,select,textarea{border:1px solid #d7dde5;background:#fff;padding:10px 11px}
+input:focus,select:focus,textarea:focus{outline:none;border-color:#78aeb4;box-shadow:0 0 0 3px rgba(31,111,120,.10)}
+.login{background:linear-gradient(145deg,#eef4f5,#f8fafc)}
+.loginbox{border:1px solid var(--line);box-shadow:0 24px 50px rgba(15,23,42,.12)}
+.dashboard-shell{display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-top:16px}
+.dashboard-panel{background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px;box-shadow:var(--shadow)}
+.dashboard-panel h3{margin:0 0 14px}
+.mini-list{display:grid;gap:8px}
+.mini-row{display:flex;justify-content:space-between;align-items:center;padding:11px 12px;background:#f8fafc;border-radius:10px}
+.mini-row strong{font-size:15px}.mini-row span{color:var(--muted);font-size:13px}
+.occupancy-ring{width:150px;height:150px;border-radius:50%;margin:10px auto;background:conic-gradient(var(--primary) 0 68%,#e5e7eb 68% 100%);display:grid;place-items:center}
+.occupancy-ring:before{content:"";width:112px;height:112px;border-radius:50%;background:#fff;position:absolute}
+.occupancy-ring b{position:relative;z-index:1;font-size:28px}
+@media(max-width:1000px){.dashboard-shell{grid-template-columns:1fr}}
+
+</style></head><body>
+<div id="loginView" class="login"><div class="loginbox"><h2>محسوبك للفنادق</h2><p>Mahsoobak Hotel ERP</p><form id="loginForm">
+<label>اسم المستخدم / Username</label><input name="username" value="admin" required><br><br>
+<label>كلمة المرور / Password</label><input type="password" name="password" value="admin123" required><br><br>
+<button class="primary" style="width:100%">دخول / Login</button></form></div></div>
+<div id="appView" class="app hidden">
+<aside><h1 id="brand">محسوبك للفنادق<br><small style="font-size:11px;color:#64748b;margin-right:48px">Mahsoobak Hotel ERP</small></h1>
+<button class="nav active" data-page="dashboard" data-permission="dashboard">الرئيسية</button><button class="nav" data-page="owner" data-permission="dashboard">شاشة المالك</button><button class="nav" data-page="bookings" data-permission="bookings">الحجوزات</button><button class="nav" data-page="rooms" data-permission="rooms">الغرف</button><button class="nav" data-page="customers" data-permission="customers">العملاء</button><button class="nav" data-page="services" data-permission="services">الخدمات</button><button class="nav" data-page="meals" data-permission="meals">الوجبات</button><button class="nav" data-page="suppliers" data-permission="suppliers">الموردون</button><button class="nav" data-page="inventory" data-permission="inventory">المخازن</button><button class="nav" data-page="finance" data-permission="finance">المالية</button><button class="nav" data-page="users" data-permission="users">المستخدمون</button>
+</aside><main><div class="top"><div><h2 id="pageTitle">لوحة التحكم</h2><small>مرحبًا بك في محسوبك للفنادق</small></div><div style="margin-inline-start:auto;margin-inline-end:16px;text-align:center"><small id="todayDate"></small><br><b id="currentTime"></b></div><div><strong id="userInfo"></strong><br><small>مدير النظام</small></div><div><button id="langBtn">English</button> <button id="logoutBtn">خروج</button></div></div>
+
+<section id="dashboard" class="page active">
+<div class="stats">
+  <div class="card clickable-card" onclick="goToModule('rooms')">عدد الغرف<b id="dRooms">30</b><small>إجمالي الوحدات</small></div>
+  <div class="card clickable-card" onclick="goToRoomsByStatus('Available')">المتاح<b id="dAvail">18</b><small>غرفة متاحة</small></div>
+  <div class="card clickable-card" onclick="goToModule('bookings')">الحجوزات<b id="dBookings">12</b><small>حجز نشط</small></div>
+  <div class="card clickable-card" onclick="goToFinancePane('cashflow')">الإيرادات<b id="dRevenue">98,750</b><small>جنيه مصري</small></div>
+  <div class="card clickable-card" onclick="goToFinancePane('receipts_log')">المصروفات<b id="dExpenses">31,250</b><small>جنيه مصري</small></div>
+  <div class="card clickable-card" onclick="goToFinancePane('balance')">الأرباح<b id="dProfitDemo">67,500</b><small>جنيه مصري</small></div>
+</div>
+
+<div class="dashboard-shell">
+  <div class="dashboard-panel">
+    <div class="toolbar"><h3>خريطة الغرف</h3><button class="primary" onclick="goToModule('rooms')">عرض جميع الغرف</button></div>
+    <div id="dashboardRoomMap" class="room-map-grid"></div>
+  </div>
+  <div class="dashboard-panel">
+    <div class="toolbar"><h3>دورة المال</h3><button class="edit" onclick="goToFinancePane('cashflow')">التقرير المالي</button></div>
+    <div class="mini-list">
+      <div class="mini-row"><strong>رصيد أول المدة</strong><span id="mOpening">52,300</span></div>
+      <div class="mini-row"><strong>المقبوضات</strong><span id="mIn">98,750</span></div>
+      <div class="mini-row"><strong>المدفوعات</strong><span id="mOut">31,250</span></div>
+      <div class="mini-row"><strong>صافي التدفق</strong><span id="mNet">67,500</span></div>
+      <div class="mini-row"><strong>رصيد آخر المدة</strong><span id="mClosing">119,800</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="dashboard-shell">
+  <div class="dashboard-panel">
+    <div class="toolbar"><h3>أحدث الحجوزات</h3><button class="edit" onclick="goToModule('bookings')">عرض الكل</button></div>
+    <table><thead><tr><th>رقم الحجز</th><th>النزيل</th><th>الغرفة</th><th>الوصول</th><th>المغادرة</th><th>الحالة</th></tr></thead><tbody id="dashboardBookingsBody"></tbody></table>
+  </div>
+  <div class="dashboard-panel">
+    <h3>نسبة الإشغال</h3>
+    <div class="occupancy-ring"><b id="dashboardOccupancy">68%</b></div>
+    <div class="mini-list">
+      <div class="mini-row"><strong>مشغول</strong><span id="dashboardOccupied">8</span></div>
+      <div class="mini-row"><strong>متاح</strong><span id="dashboardAvailable">18</span></div>
+      <div class="mini-row"><strong>خارج الخدمة</strong><span id="dashboardOut">2</span></div>
+    </div>
+  </div>
+</div>
+</section>
+
+
+<section id="owner" class="page">
+<div class="toolbar no-print">
+  <h3>شاشة مالك الفندق</h3>
+  <div>
+    <button class="print-btn" onclick="printSection('ownerPrintArea','تقرير مالك الفندق')">طباعة الشاشة</button>
+  </div>
+</div>
+<div class="filter-row no-print">
+  <div><label>من</label><input type="date" id="ownerFrom"></div>
+  <div><label>إلى</label><input type="date" id="ownerTo"></div>
+  <button class="primary" onclick="loadOwnerDashboard()">تطبيق</button>
+</div>
+<div id="ownerPrintArea">
+  <div class="owner-grid">
+    <div class="owner-card clickable-card" onclick="goToModule('rooms')">إجمالي الغرف<b id="oTotalRooms">0</b></div>
+    <div class="owner-card clickable-card" onclick="goToRoomsByStatus('Available')">المتاح<b id="oAvailable">0</b></div>
+    <div class="owner-card clickable-card" onclick="goToRoomsByStatus('Occupied')">المشغول<b id="oOccupied">0</b></div>
+    <div class="owner-card clickable-card" onclick="goToModule('rooms')">نسبة الإشغال<b id="oOccupancy">0%</b></div>
+    <div class="owner-card clickable-card" onclick="goToModule('bookings')">الحجوزات النشطة<b id="oActiveBookings">0</b></div>
+    <div class="owner-card clickable-card" onclick="goToFinancePane('trial')">الإيرادات<b id="oRevenue">0</b></div>
+    <div class="owner-card clickable-card" onclick="goToFinancePane('cashflow')">التحصيلات<b id="oCollections">0</b></div>
+    <div class="owner-card clickable-card" onclick="goToFinancePane('receipts_log')">المصروفات<b id="oExpenses">0</b></div>
+    <div class="owner-card clickable-card" onclick="goToFinancePane('balance')">الأرباح التقديرية<b id="oProfit">0</b></div>
+    <div class="owner-card clickable-card" onclick="goToModule('bookings')">المديونيات<b id="oOutstanding">0</b></div>
+    <div class="owner-card clickable-card" onclick="goToFinancePane('cash')">إجمالي النقدية<b id="oCash">0</b></div>
+    <div class="owner-card clickable-card" onclick="goToModule('inventory')">أصناف منخفضة<b id="oLowStock">0</b></div>
+  </div>
+
+  <div class="owner-two">
+    <div class="owner-section">
+      <div class="toolbar"><h4>توزيع الإيرادات</h4><button class="print-btn no-print" onclick="printSection(this.closest('.owner-section'),'توزيع الإيرادات')">طباعة</button></div>
+      <table><tbody>
+        <tr><td>إيرادات الإقامة والسراير</td><td id="oRoomRevenue">0</td></tr>
+        <tr><td>إيرادات الوجبات</td><td id="oMealRevenue">0</td></tr>
+        <tr><td>إيرادات الخدمات والأنشطة</td><td id="oServiceRevenue">0</td></tr>
+      </tbody></table>
+    </div>
+    <div class="owner-section">
+      <div class="toolbar"><h4>أرصدة الخزائن</h4><button class="print-btn no-print" onclick="printSection(this.closest('.owner-section'),'أرصدة الخزائن')">طباعة</button></div>
+      <table><thead><tr><th>الخزنة</th><th>الرصيد</th></tr></thead><tbody id="ownerCashboxesBody"></tbody></table>
+    </div>
+  </div>
+
+  <div class="owner-section">
+    <div class="toolbar"><h4>أحدث الحجوزات</h4><button class="print-btn no-print" onclick="printSection(this.closest('.owner-section'),'أحدث الحجوزات')">طباعة</button></div>
+    <table><thead><tr><th>الحجز</th><th>النزيل</th><th>الغرفة</th><th>الفترة</th><th>الحالة</th><th>الإجمالي</th><th>المتبقي</th></tr></thead><tbody id="ownerBookingsBody"></tbody></table>
+  </div>
+
+  <div class="owner-section">
+    <div class="toolbar"><h4>الأصناف عند أو تحت حد الطلب</h4><button class="print-btn no-print" onclick="printSection(this.closest('.owner-section'),'الأصناف منخفضة المخزون')">طباعة</button></div>
+    <table><thead><tr><th>الصنف</th><th>الرصيد</th><th>حد الطلب</th></tr></thead><tbody id="ownerLowStockBody"></tbody></table>
+  </div>
+</div>
+</section>
+<section id="bookings" class="page"><div class="toolbar"><h3>الحجوزات</h3><button class="print-btn" onclick="printSection('bookings','تقرير الحجوزات')">طباعة</button><button class="primary" onclick="openBooking()">+ حجز</button></div><table><thead><tr><th>#</th><th>العميل</th><th>الغرفة</th><th>الفترة</th><th>الإجمالي</th><th>المدفوع</th><th>المتبقي</th><th>الحالة</th><th></th></tr></thead><tbody id="bookingsBody"></tbody></table></section>
+
+<section id="rooms" class="page">
+<div class="toolbar"><h3>خريطة الغرف والأجنحة</h3><button class="print-btn" onclick="printSection('rooms','خريطة الغرف والأجنحة')">طباعة</button><button class="primary" onclick="openGeneric('room')">+ إضافة وحدة</button></div>
+<div class="room-map-tabs">
+<button id="tabRooms" class="active" onclick="setRoomMapFilter('Room')">الغرف 26</button>
+<button id="tabSuites" onclick="setRoomMapFilter('Suite')">الأجنحة 4</button>
+<button id="tabAll" onclick="setRoomMapFilter('All')">الكل 30</button>
+</div>
+<div id="roomMapGrid" class="room-map-grid"></div>
+</section>
+
+<section id="customers" class="page"><div class="toolbar"><h3>العملاء</h3><button class="print-btn" onclick="printSection('customers','تقرير العملاء')">طباعة</button><button class="primary" onclick="openGeneric('customer')">+ عميل</button></div><table><thead><tr><th>الاسم</th><th>النوع</th><th>الهاتف</th><th>الجنسية</th><th>البريد</th><th></th></tr></thead><tbody id="customersBody"></tbody></table></section>
+<section id="services" class="page"><div class="toolbar"><h3>الخدمات</h3><button class="print-btn" onclick="printSection('services','تقرير الخدمات')">طباعة</button><button class="primary" onclick="openGeneric('service')">+ خدمة</button></div><table><thead><tr><th>العربي</th><th>English</th><th>طريقة الحساب</th><th>سعر البيع</th><th>التكلفة</th><th></th></tr></thead><tbody id="servicesBody"></tbody></table></section>
+<section id="meals" class="page"><div class="toolbar"><h3>الوجبات</h3><button class="print-btn" onclick="printSection('meals','تقرير الوجبات')">طباعة</button><button class="primary" onclick="openGeneric('meal')">+ باقة</button></div><table><thead><tr><th>العربي</th><th>English</th><th>إفطار</th><th>غداء</th><th>عشاء</th><th></th></tr></thead><tbody id="mealsBody"></tbody></table></section>
+<section id="suppliers" class="page"><div class="toolbar"><h3>الموردون</h3><button class="print-btn" onclick="printSection('suppliers','تقرير الموردين')">طباعة</button><button class="primary" onclick="openGeneric('supplier')">+ مورد</button></div><table><thead><tr><th>الاسم</th><th>الهاتف</th><th>البريد</th><th>رصيد افتتاحي</th><th></th></tr></thead><tbody id="suppliersBody"></tbody></table></section>
+<section id="inventory" class="page"><div class="toolbar"><h3>المخازن</h3><button class="print-btn" onclick="printSection('inventory','تقرير المخازن')">طباعة</button><div><button class="primary" onclick="openGeneric('warehouse')">+ مخزن</button> <button class="primary" onclick="openGeneric('item')">+ صنف</button> <button class="primary" onclick="openGeneric('stock')">+ حركة</button></div></div><div class="panel"><h4>الأصناف</h4><table><thead><tr><th>الصنف</th><th>SKU</th><th>الوحدة</th><th>حد الطلب</th><th></th></tr></thead><tbody id="itemsBody"></tbody></table></div><br><div class="panel"><h4>الحركات</h4><table><thead><tr><th>المخزن</th><th>الصنف</th><th>النوع</th><th>الكمية</th><th>التكلفة</th><th>التاريخ</th></tr></thead><tbody id="stockBody"></tbody></table></div></section>
+
+<section id="finance" class="page">
+<div class="toolbar"><h3>المالية وإدارة الحسابات</h3><button class="print-btn" onclick="printSection('finance','التقرير المالي')">طباعة</button></div>
+
+<div class="finance-nav">
+<button type="button" data-fpane="cash" onclick="showFinancePane('cash')">💰 خزنة وبنوك</button>
+<button type="button" data-fpane="receipt_in" onclick="showFinancePane('receipt_in')">📥 إيصال استلام</button>
+<button type="button" data-fpane="receipt_out" onclick="showFinancePane('receipt_out')">📤 إيصال صرف</button>
+<button type="button" data-fpane="receipts_log" onclick="showFinancePane('receipts_log')">🧾 سجل الإيصالات</button>
+<button type="button" data-fpane="add_account" onclick="showFinancePane('add_account')">➕ إضافة حساب</button>
+<button type="button" data-fpane="accounts_tree" onclick="showFinancePane('accounts_tree')">🌳 شجرة الحسابات</button>
+<button type="button" data-fpane="journal" onclick="showFinancePane('journal')">📒 القيود اليومية</button>
+<button type="button" data-fpane="trial" onclick="showFinancePane('trial')">⚖️ ميزان المراجعة</button><button type="button" data-fpane="balance" onclick="showFinancePane('balance')">📊 الميزانية العمومية</button><button type="button" data-fpane="cashflow" onclick="showFinancePane('cashflow')">🔄 دورة المال / Cash Flow</button>
+</div>
+
+<div id="fpane_cash" class="finance-pane">
+<div class="toolbar"><h4>الخزائن والبنوك</h4><button class="primary" onclick="openGeneric('cashbox')">+ إضافة خزنة</button></div>
+<table><thead><tr><th>الخزنة</th><th>الرصيد الافتتاحي</th><th>إيرادات</th><th>مصروفات</th><th>الرصيد الحالي</th><th>الحالة</th><th></th></tr></thead><tbody id="cashboxesBody"></tbody></table>
+</div>
+
+<div id="fpane_receipt_in" class="finance-pane"><div class="panel"><h4>إيصال استلام نقدية</h4><form id="receiptInForm"><div id="receiptInFields" class="grid"></div><div class="actions"><button class="primary">حفظ إيصال الاستلام</button></div></form></div></div>
+<div id="fpane_receipt_out" class="finance-pane"><div class="panel"><h4>إيصال صرف نقدية</h4><form id="receiptOutForm"><div id="receiptOutFields" class="grid"></div><div class="actions"><button class="primary">حفظ إيصال الصرف</button></div></form></div></div>
+
+<div id="fpane_receipts_log" class="finance-pane">
+<div class="filter-row"><div><label>من</label><input type="date" id="receiptFrom"></div><div><label>إلى</label><input type="date" id="receiptTo"></div><button class="primary" onclick="loadReceipts()">تطبيق</button></div>
+<table><thead><tr><th>رقم الإيصال</th><th>التاريخ</th><th>النوع</th><th>الخزنة</th><th>الطرف</th><th>الحجز</th><th>المبلغ</th><th>البيان</th><th></th></tr></thead><tbody id="receiptsBody"></tbody></table>
+</div>
+
+<div id="fpane_add_account" class="finance-pane"><div class="panel"><h4>إضافة حساب جديد</h4><form id="accountForm"><div class="grid">
+<div><label>كود الحساب</label><input name="code" required></div><div><label>اسم الحساب بالعربي</label><input name="name_ar" required></div>
+<div><label>English name</label><input name="name_en"></div><div><label>نوع الحساب</label><select name="account_type"><option>Asset</option><option>Liability</option><option>Equity</option><option>Revenue</option><option>Expense</option></select></div>
+<div><label>تابع لحساب</label><input name="parent_code"></div><div><label>الطبيعة</label><select name="normal_side"><option value="debit">مدين</option><option value="credit">دائن</option></select></div>
+<div><label>رصيد افتتاحي</label><input type="number" step="0.01" name="opening_balance" value="0"></div>
+</div><div class="actions"><button class="primary">حفظ الحساب</button></div></form></div></div>
+
+<div id="fpane_accounts_tree" class="finance-pane"><table><thead><tr><th>الكود</th><th>اسم الحساب</th><th>النوع</th><th>الحساب الأب</th><th>الرصيد الافتتاحي</th></tr></thead><tbody id="accountsBody"></tbody></table></div>
+
+<div id="fpane_journal" class="finance-pane">
+<div class="filter-row"><div><label>من</label><input type="date" id="journalFrom"></div><div><label>إلى</label><input type="date" id="journalTo"></div><button class="primary" onclick="loadJournal()">تطبيق</button><button onclick="window.print()">طباعة</button></div>
+<table><thead><tr><th>رقم القيد</th><th>التاريخ</th><th>الحساب</th><th>البيان</th><th>مدين</th><th>دائن</th></tr></thead><tbody id="journalBody"></tbody></table>
+</div>
+
+<div id="fpane_trial" class="finance-pane">
+<div class="filter-row"><div><label>من</label><input type="date" id="trialFrom"></div><div><label>إلى</label><input type="date" id="trialTo"></div><button class="primary" onclick="loadTrialBalance()">تطبيق</button><button onclick="window.print()">طباعة</button></div>
+<table><thead><tr><th>الكود</th><th>الحساب</th><th>إجمالي مدين</th><th>إجمالي دائن</th><th>الرصيد</th></tr></thead><tbody id="trialBody"></tbody></table>
+</div>
+
+
+<div id="fpane_balance" class="finance-pane">
+<div class="toolbar">
+  <h4>الميزانية العمومية</h4>
+  <button class="print-btn no-print" onclick="printSection('balanceSheetPrintArea','الميزانية العمومية')">طباعة</button>
+</div>
+<div class="filter-row no-print">
+  <div><label>حتى تاريخ</label><input type="date" id="balanceDate"></div>
+  <button class="primary" onclick="loadBalanceSheet()">تطبيق</button>
+</div>
+<div id="balanceSheetPrintArea" class="balance-sheet-grid">
+  <div class="panel">
+    <h4>الأصول</h4>
+    <table><thead><tr><th>الكود</th><th>الحساب</th><th>الرصيد</th></tr></thead><tbody id="balanceAssetsBody"></tbody><tfoot><tr class="balance-total"><td colspan="2">إجمالي الأصول</td><td id="balanceAssetsTotal">0</td></tr></tfoot></table>
+  </div>
+  <div class="panel">
+    <h4>الخصوم وحقوق الملكية</h4>
+    <table><thead><tr><th>الكود</th><th>الحساب</th><th>الرصيد</th></tr></thead><tbody id="balanceLiabilitiesBody"></tbody></table>
+    <h4>حقوق الملكية</h4>
+    <table><tbody id="balanceEquityBody"></tbody>
+    <tfoot>
+      <tr><td colspan="2">صافي ربح الفترة</td><td id="balanceProfit">0</td></tr>
+      <tr class="balance-total"><td colspan="2">إجمالي الخصوم وحقوق الملكية</td><td id="balanceRightTotal">0</td></tr>
+      <tr><td colspan="2">فرق الميزانية</td><td id="balanceDifference">0</td></tr>
+    </tfoot></table>
+  </div>
+</div>
+</div>
+<div id="fpane_cashflow" class="finance-pane">
+<div class="toolbar">
+  <h4>دورة المال / Cash Flow</h4>
+  <button class="print-btn no-print" onclick="printSection('cashFlowPrintArea','تقرير التدفق النقدي')">طباعة التقرير</button>
+</div>
+<div class="filter-row no-print">
+  <div><label>من</label><input type="date" id="cashFlowFrom"></div>
+  <div><label>إلى</label><input type="date" id="cashFlowTo"></div>
+  <div><label>الخزنة</label><select id="cashFlowCashbox"><option value="">كل الخزائن</option></select></div>
+  <button class="primary" onclick="loadCashFlow()">تطبيق</button>
+</div>
+<div id="cashFlowPrintArea">
+  <div class="cashflow-kpis">
+    <div class="card">رصيد أول المدة<b id="cfOpening">0</b></div>
+    <div class="card">المقبوضات<b id="cfIn">0</b></div>
+    <div class="card">المدفوعات<b id="cfOut">0</b></div>
+    <div class="card">صافي التدفق<b id="cfNet">0</b></div>
+    <div class="card">رصيد آخر المدة<b id="cfClosing">0</b></div>
+  </div>
+  <table>
+    <thead><tr><th>التاريخ</th><th>الخزنة</th><th>النوع</th><th>الطرف</th><th>الحجز</th><th>البيان</th><th>مقبوض</th><th>مدفوع</th><th>الرصيد الجاري</th></tr></thead>
+    <tbody id="cashFlowBody"></tbody>
+  </table>
+</div>
+</div>
+</section>
+
+<section id="users" class="page"><div class="toolbar"><h3>المستخدمون</h3><button class="primary" onclick="openGeneric('user')">+ مستخدم</button></div><table><thead><tr><th>الاسم</th><th>المستخدم</th><th>الدور</th><th>الصلاحيات</th><th>الحالة</th><th></th></tr></thead><tbody id="usersBody"></tbody></table></section>
+</main></div>
+
+<div id="roomDetailsModal" class="modal"><div class="box">
+<div class="toolbar"><h3 id="roomDetailsTitle">تفاصيل الغرفة</h3><button type="button" onclick="closeRoomDetails()">X</button></div>
+<div id="roomDetailsContent"></div>
+</div></div>
+<div id="modal" class="modal"><div class="box"><h3 id="modalTitle"></h3><form id="genericForm"><div id="formFields" class="grid"></div><div id="extraArea"></div><div class="actions"><button class="primary">حفظ</button><button type="button" onclick="closeModal()">إلغاء</button></div></form></div></div>
+<script>
+let me=null,lang='ar',edit=null,cache={};
+
+function updateClock(){
+  const now=new Date();
+  todayDate.textContent=now.toLocaleDateString('ar-EG',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  currentTime.textContent=now.toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'});
+}
+setInterval(updateClock,1000);updateClock();
+
+function renderDashboardRoomMap(){
+  const list=(cache.roomMap||[]).slice(0,12);
+  if(!window.dashboardRoomMap)return;
+  dashboardRoomMap.innerHTML=list.map(x=>`
+    <div class="room-card ${roomClass(x.status)}" onclick="goToModule('rooms');setTimeout(()=>openRoomDetails(${x.id}),60)">
+      <div class="room-head">
+        <span class="room-title">${x.room_code}</span>
+        <span class="room-status">${statusAr(x.status)}</span>
+      </div>
+      <div class="room-meta">${x.room_name||''}</div>
+    </div>`).join('');
+}
+function renderDashboardBookings(){
+  const rows=(cache.bookings||[]).slice(0,5);
+  if(!window.dashboardBookingsBody)return;
+  dashboardBookingsBody.innerHTML=rows.map(x=>`<tr>
+    <td>${x.booking_no}</td><td>${x.customer_name}</td><td>${x.room_code}</td>
+    <td>${x.check_in}</td><td>${x.check_out}</td><td>${x.status}</td>
+  </tr>`).join('');
+}
+
+
+function goToModule(page){
+  const nav=[...document.querySelectorAll('.nav')].find(x=>x.dataset.page===page && !x.classList.contains('hidden'));
+  if(nav)nav.click();
+}
+function goToFinancePane(pane){
+  goToModule('finance');
+  setTimeout(()=>showFinancePane(pane),50);
+}
+let roomStatusFilter='All';
+function goToRoomsByStatus(status){
+  roomStatusFilter=status;
+  goToModule('rooms');
+  renderRoomMap();
+}
+
+const api=async(u,o={})=>{
+let r=await fetch(u,{credentials:'same-origin',...o});
+let d=await r.json().catch(()=>({}));
+if(r.status===401){showLogin();throw Error('Login required')}
+if(!r.ok){
+  let msg=d.detail||d.message||'Error';
+  if(Array.isArray(msg)) msg=msg.map(x=>x.msg||JSON.stringify(x)).join('\n');
+  else if(typeof msg==='object') msg=JSON.stringify(msg);
+  throw Error(msg);
+}
+return d
+}
+function showLogin(){loginView.classList.remove('hidden');appView.classList.add('hidden')}
+function hasPermission(p){return me && (me.role==='Admin' || (me.permissions||[]).includes(p))}
+function applyPermissions(){
+  document.querySelectorAll('[data-permission]').forEach(el=>{
+    el.classList.toggle('hidden',!hasPermission(el.dataset.permission));
+  });
+  const allowed=[...document.querySelectorAll('.nav[data-permission]')].filter(x=>!x.classList.contains('hidden'));
+  document.querySelectorAll('.nav').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
+  if(allowed.length){
+    allowed[0].classList.add('active');
+    document.getElementById(allowed[0].dataset.page).classList.add('active');
+    pageTitle.textContent=allowed[0].textContent;
+  }else{
+    pageTitle.textContent='لا توجد صلاحيات مخصصة لهذا المستخدم';
+  }
+}
+function showApp(){
+  loginView.classList.add('hidden');
+  appView.classList.remove('hidden');
+  applyPermissions();
+}
+loginForm.onsubmit=async e=>{
+e.preventDefault();
+let p=Object.fromEntries(new FormData(e.target));
+p.username=(p.username||'').trim().toLowerCase();
+try{
+  await api('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(p)});
+  me=await api('/api/me');
+  userInfo.textContent=me.full_name+' - '+me.role;
+  showApp();
+  loadAll();
+}catch(x){alert(x.message)}
+}
+logoutBtn.onclick=async()=>{await api('/api/logout',{method:'POST'});showLogin()}
+document.querySelectorAll('.nav').forEach(b=>b.onclick=()=>{document.querySelectorAll('.nav').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.getElementById(b.dataset.page).classList.add('active');pageTitle.textContent=b.textContent})
+langBtn.onclick=()=>{lang=lang==='ar'?'en':'ar';document.documentElement.dir=lang==='ar'?'rtl':'ltr';langBtn.textContent=lang==='ar'?'English':'العربية'}
+function closeModal(){modal.classList.remove('open');genericForm.reset();edit=null;extraArea.innerHTML=''}
+const defs={
+room:[['room_code','كود الغرفة','text'],['room_name','اسم الغرفة','text'],['room_type','النوع','text'],['floor_or_area','الموقع','text'],['base_beds','السراير الأساسية','number'],['max_beds','الحد الأقصى','number'],['base_price_per_night','سعر الليلة','number'],['extra_bed_price_per_night','سعر السرير الإضافي','number']],
+customer:[['name','الاسم','text'],['customer_type','النوع','text'],['phone','الهاتف','text'],['national_id','الرقم القومي','text'],['nationality','الجنسية','text'],['email','البريد','email'],['address','العنوان','text'],['opening_balance','رصيد افتتاحي','number']],
+supplier:[['name','الاسم','text'],['phone','الهاتف','text'],['email','البريد','email'],['address','العنوان','text'],['opening_balance','رصيد افتتاحي','number']],
+service:[['name_ar','الاسم العربي','text'],['name_en','English Name','text'],['category','التصنيف','text'],['pricing_type','طريقة الحساب','text'],['sale_price','سعر البيع','number'],['cost_price','التكلفة','number']],
+meal:[['name_ar','الاسم العربي','text'],['name_en','English Name','text'],['breakfast_price','إفطار','number'],['lunch_price','غداء','number'],['dinner_price','عشاء','number']],
+warehouse:[['name','اسم المخزن','text'],['location','الموقع','text']],
+item:[['name_ar','اسم الصنف','text'],['name_en','English Name','text'],['sku','SKU','text'],['category','التصنيف','text'],['unit','الوحدة','text'],['reorder_level','حد إعادة الطلب','number']],
+cashbox:[['name','اسم الخزنة','text'],['opening_balance','رصيد افتتاحي','number']],
+user:[['full_name','الاسم','text'],['username','اسم المستخدم','text'],['password','كلمة المرور','password']]
+};
+const endpoints={room:'/api/rooms',customer:'/api/customers',supplier:'/api/suppliers',service:'/api/services',meal:'/api/meal-plans',warehouse:'/api/warehouses',item:'/api/items',cashbox:'/api/cashboxes',user:'/api/users'}
+function field(n,l,t='text'){return `<div><label>${l}</label><input name="${n}" type="${t}" ${t==='number'?'step="0.01"':''} required></div>`}
+async function openGeneric(type,obj=null){
+edit=obj?{type,id:obj.id}:null;modalTitle.textContent=(obj?'تعديل ':'إضافة ')+type;extraArea.innerHTML='';
+if(type==='finance'){
+await Promise.all([loadCashboxes(),loadCustomers(),loadSuppliers(),loadBookings()]);
+formFields.innerHTML=`
+<div><label>نوع الحركة</label><select name="transaction_type"><option value="Income">إيراد</option><option value="Expense">مصروف</option></select></div>
+<div><label>الخزنة</label><select name="cashbox_id" required><option value="">اختر الخزنة</option>${cache.cashboxes.map(x=>`<option value="${x.id}">${x.name}</option>`)}</select></div>
+${field('amount','المبلغ','number')}
+<div><label>طريقة الدفع</label><select name="payment_method"><option value="Cash">نقدي</option><option value="Card">بطاقة</option><option value="Bank Transfer">تحويل بنكي</option><option value="Wallet">محفظة</option></select></div>
+<div><label>العميل (اختياري)</label><select name="customer_id"><option value="">بدون</option>${cache.customers.map(x=>`<option value="${x.id}">${x.name}</option>`)}</select></div>
+<div><label>المورد (اختياري)</label><select name="supplier_id"><option value="">بدون</option>${cache.suppliers.map(x=>`<option value="${x.id}">${x.name}</option>`)}</select></div>
+<div><label>الحجز (اختياري)</label><select name="booking_id"><option value="">بدون</option>${(cache.bookings||[]).map(x=>`<option value="${x.id}">${x.booking_no} - ${x.customer_name}</option>`)}</select></div>
+${field('description','البيان','text')}`;
+edit=obj?{type,id:obj.id}:null
+}
+else if(type==='stock'){await Promise.all([loadWarehouses(),loadItems(),loadSuppliers()]);formFields.innerHTML=`<div><label>المخزن</label><select name="warehouse_id">${cache.warehouses.map(x=>`<option value="${x.id}">${x.name}</option>`)}</select></div><div><label>الصنف</label><select name="item_id">${cache.items.map(x=>`<option value="${x.id}">${x.name_ar}</option>`)}</select></div><div><label>النوع</label><select name="movement_type"><option value="IN">وارد</option><option value="OUT">منصرف</option></select></div>${field('quantity','الكمية','number')}${field('unit_cost','تكلفة الوحدة','number')}`}
+else {
+  formFields.innerHTML=defs[type].map(x=>field(...x)).join('');
+  if(type==='user'){
+    formFields.innerHTML += `<div><label>الدور</label><select name="role">
+      <option value="Reception">استقبال</option>
+      <option value="Accountant">محاسب</option>
+      <option value="Storekeeper">أمين مخزن</option>
+      <option value="Manager">مدير</option>
+      <option value="Admin">مدير النظام</option>
+    </select></div>`;
+    extraArea.innerHTML=`<h4>صلاحيات الموديولات</h4>
+    <div class="grid" id="permissionGrid">
+      ${[
+        ['dashboard','لوحة التحكم'],['bookings','الحجوزات'],['rooms','الغرف'],
+        ['customers','العملاء'],['services','الخدمات'],['meals','الوجبات'],
+        ['suppliers','الموردون'],['inventory','المخازن'],['finance','المالية'],
+        ['users','المستخدمون والصلاحيات']
+      ].map(([v,l])=>`<label style="display:flex;gap:8px;align-items:center"><input style="width:auto" type="checkbox" name="permissions" value="${v}"> ${l}</label>`).join('')}
+    </div>`;
+  }
+}
+if(obj){
+  Object.entries(obj).forEach(([k,v])=>{let el=genericForm.elements[k];if(el&&v!=null&&k!=='password'&&k!=='permissions')el.value=v});
+  if(type==='user'){
+    (obj.permissions||[]).forEach(p=>{
+      const cb=genericForm.querySelector(`input[name="permissions"][value="${p}"]`);
+      if(cb)cb.checked=true;
+    });
+    const pw=genericForm.elements.password;
+    if(pw){pw.required=false;pw.placeholder='اتركها فارغة للاحتفاظ بكلمة المرور الحالية'}
+  }
+}
+modal.classList.add('open');genericForm.dataset.type=type
+}
+genericForm.onsubmit=async e=>{
+e.preventDefault();
+let type=e.target.dataset.type;
+if(type==='booking')return;
+let fd=new FormData(e.target),p=Object.fromEntries(fd);
+Object.keys(p).forEach(k=>{if(['number','hidden'].includes(e.target.elements[k]?.type))p[k]=Number(p[k]||0)});
+if(type==='finance'){
+  ['cashbox_id','customer_id','supplier_id','booking_id'].forEach(k=>p[k]=p[k]?Number(p[k]):null);
+}
+if(type==='user'){
+  p.full_name=(p.full_name||'').trim();
+  p.username=(p.username||'').trim().toLowerCase();
+  p.permissions=fd.getAll('permissions');
+  if(!p.password)p.password='';
+}
+let url=type==='finance'?'/api/finance':type==='stock'?'/api/stock-movements':endpoints[type];
+try{
+  await api(edit?`${url}/${edit.id}`:url,{method:edit?'PUT':'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(p)});
+  closeModal();loadAll()
+}catch(x){alert(x.message)}
+}
+async function openBooking(id=null){await Promise.all([loadCustomers(),loadRooms(),loadMeals(),loadServices()]);let x=id?await api('/api/bookings/'+id):null;edit=x?{type:'booking',id}:null;modalTitle.textContent=x?'تعديل الحجز':'حجز جديد';formFields.innerHTML=`<div><label>العميل</label><select name="customer_id">${cache.customers.map(a=>`<option value="${a.id}">${a.name}</option>`)}</select></div><div><label>الغرفة</label><select name="room_id">${cache.rooms.map(a=>`<option value="${a.id}">${a.room_code} - ${a.room_name||''}</option>`)}</select></div>${field('check_in','الوصول','date')}${field('check_out','المغادرة','date')}${field('adults','البالغين','number')}${field('children','الأطفال','number')}${field('extra_beds','السراير الإضافية','number')}<div><label>الوجبات</label><select name="meal_plan_id"><option value="">--</option>${cache.meals.map(a=>`<option value="${a.id}">${a.name_ar}</option>`)}</select></div>${field('discount','الخصم','number')}${field('tax','الضريبة','number')}${field('paid_amount','المدفوع','number')}`;extraArea.innerHTML='<h4>الخدمات</h4><div id="svcRows"></div><button type="button" onclick="addSvc()">+ خدمة</button>';genericForm.dataset.type='booking';if(x){Object.entries(x).forEach(([k,v])=>{let el=genericForm.elements[k];if(el&&v!=null)el.value=v});(x.services||[]).forEach(s=>addSvc(s))}
+modal.classList.add('open');
+}
+function addSvc(s={}){let d=document.createElement('div');d.className='svcrow';d.innerHTML=`<select class="sid">${cache.services.map(a=>`<option value="${a.id}" data-p="${a.sale_price}">${a.name_ar}</option>`)}</select><input class="qty" type="number" value="${s.quantity||1}"><input class="price" type="number" value="${s.unit_price||cache.services[0]?.sale_price||0}"><button type="button" onclick="this.parentElement.remove()">X</button>`;svcRows.appendChild(d);if(s.service_id)d.querySelector('.sid').value=s.service_id}
+genericForm.addEventListener('submit',async e=>{if(e.target.dataset.type!=='booking')return;e.preventDefault();let p=Object.fromEntries(new FormData(e.target));['customer_id','room_id','adults','children','extra_beds','discount','tax','paid_amount'].forEach(k=>p[k]=Number(p[k]||0));p.meal_plan_id=p.meal_plan_id?Number(p.meal_plan_id):null;p.services=[...document.querySelectorAll('.svcrow')].map(r=>({service_id:Number(r.querySelector('.sid').value),quantity:Number(r.querySelector('.qty').value),unit_price:Number(r.querySelector('.price').value)}));try{await api(edit?`/api/bookings/${edit.id}`:'/api/bookings',{method:edit?'PUT':'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(p)});closeModal();loadAll()}catch(x){alert(x.message)}},true)
+async function del(url){if(confirm('حذف؟')){await api(url,{method:'DELETE'});loadAll()}}
+async function actionBooking(id,a){
+  try{
+    await api(`/api/bookings/${id}/${a}`,{method:'POST'});
+    await loadAll();
+  }catch(e){alert(e.message)}
+}
+async function loadDashboard(){let d=await api('/api/dashboard');dRooms.textContent=d.rooms;dAvail.textContent=d.available_rooms;dBookings.textContent=d.bookings;dCustomers.textContent=d.customers;dRevenue.textContent=d.revenue;dCollections.textContent=d.collections;dExpenses.textContent=d.expenses;dOutstanding&&(dOutstanding.textContent=d.outstanding);if(window.dProfitDemo)dProfitDemo.textContent=(d.revenue-d.expenses).toLocaleString('en-US')}
+let roomMapFilter='Room';
+function setRoomMapFilter(filter){
+  roomMapFilter=filter;
+  roomStatusFilter='All';
+  ['tabRooms','tabSuites','tabAll'].forEach(id=>document.getElementById(id)?.classList.remove('active'));
+  if(filter==='Room')tabRooms.classList.add('active');
+  if(filter==='Suite')tabSuites.classList.add('active');
+  if(filter==='All')tabAll.classList.add('active');
+  renderRoomMap();
+}
+function statusAr(status){
+  return {Available:'فاضي',Reserved:'محجوز',Occupied:'مشغول',Cleaning:'تنظيف',Maintenance:'صيانة'}[status]||status;
+}
+function roomClass(status){
+  return {Available:'available',Reserved:'reserved',Occupied:'occupied',Cleaning:'cleaning',Maintenance:'maintenance'}[status]||'available';
+}
+async function loadRooms(){
+  cache.rooms=await api('/api/rooms');
+  cache.roomMap=await api('/api/room-map');
+  renderRoomMap();renderDashboardRoomMap();
+}
+function renderRoomMap(){
+  const list=(cache.roomMap||[]).filter(x=>
+    (roomMapFilter==='All'||x.room_type===roomMapFilter) &&
+    (roomStatusFilter==='All'||x.status===roomStatusFilter)
+  );
+  roomMapGrid.innerHTML=list.map(x=>{
+    const b=x.booking;
+    return `<div class="room-card ${roomClass(x.status)}" onclick="openRoomDetails(${x.id})">
+      <div class="room-head"><span class="room-title">${x.room_name}</span><span class="room-status">${statusAr(x.status)}</span></div>
+      <div class="room-meta">${x.room_type==='Suite'?'جناح':'غرفة'} • ${x.base_beds} سرير أساسي • حد أقصى ${x.max_beds}</div>
+      ${b?`<div class="room-guest"><b>${b.customer_name}</b><br><small>${b.check_in} ← ${b.check_out}</small><br><small>إضافي: ${b.extra_beds} | متبقي: ${b.balance_due}</small></div>`:`<div class="room-guest"><b>متاحة للحجز</b></div>`}
+    </div>`;
+  }).join('');
+}
+async function openRoomDetails(roomId){
+  const room=(cache.roomMap||[]).find(x=>x.id===roomId);
+  if(!room)return;
+  const b=room.booking;
+  roomDetailsTitle.textContent=room.room_name;
+  roomDetailsContent.innerHTML=`
+    <div class="room-summary">
+      <div><small>الحالة</small><b>${statusAr(room.status)}</b></div>
+      <div><small>السراير</small><b>${room.base_beds}${b?` + ${b.extra_beds}`:''}</b></div>
+      <div><small>الحد الأقصى</small><b>${room.max_beds}</b></div>
+    </div>
+    ${b?`
+      <div class="panel">
+        <h4>${b.customer_name}</h4>
+        <p>الحجز: ${b.booking_no}</p>
+        <p>الفترة: ${b.check_in} إلى ${b.check_out}</p>
+        <p>البالغين: ${b.adults} — الأطفال: ${b.children}</p>
+        <p>الوجبات: ${b.meal_plan||'بدون'}</p>
+        <p>الخدمات: ${b.services.length?b.services.map(s=>`${s.name} × ${s.quantity}`).join('، '):'بدون'}</p>
+        <p><b>الإجمالي: ${b.grand_total} — المدفوع: ${b.paid_amount} — المتبقي: ${b.balance_due}</b></p>
+        <div class="room-actions">
+          <button class="primary" onclick="addExtraBed(${b.id})">+ سرير إضافي</button>
+          <button class="primary" onclick="addMealFromRoom(${b.id})">+ وجبة</button>
+          <button class="primary" onclick="addServiceFromRoom(${b.id})">+ خدمة</button>
+          <button class="edit" onclick="closeRoomDetails();openBooking(${b.id})">تعديل الحجز</button>
+          ${b.status==='Reserved'?`<button class="success" onclick="actionBooking(${b.id},'check-in');closeRoomDetails()">تسجيل وصول</button>`:''}
+          ${b.status==='Checked-in'?`<button class="warn" onclick="actionBooking(${b.id},'check-out');closeRoomDetails()">تسجيل مغادرة</button>`:''}
+        </div>
+      </div>`:
+      `<div class="panel"><p>الوحدة فاضية حاليًا.</p><div class="room-actions">
+        <button class="primary" onclick="closeRoomDetails();openBookingForRoom(${room.id})">حجز الغرفة</button>
+        <button class="warn" onclick="markRoomMaintenance(${room.id})">تحويل إلى صيانة</button>
+      </div></div>`}
+    ${room.status==='Cleaning'?`<div class="room-actions"><button class="success" onclick="markRoomAvailable(${room.id})">تم التنظيف — تحويل لمتاحة</button></div>`:''}
+    ${room.status==='Maintenance'?`<div class="room-actions"><button class="success" onclick="markRoomAvailable(${room.id})">إنهاء الصيانة — تحويل لمتاحة</button></div>`:''}
+  `;
+  roomDetailsModal.classList.add('open');
+}
+function closeRoomDetails(){roomDetailsModal.classList.remove('open')}
+async function openBookingForRoom(roomId){
+  await openBooking();
+  genericForm.elements.room_id.value=roomId;
+}
+async function addExtraBed(bookingId){
+  try{await api(`/api/bookings/${bookingId}/add-extra-bed`,{method:'POST'});await loadAll();closeRoomDetails();openRoomDetails((cache.roomMap||[]).find(x=>x.booking?.id===bookingId)?.id)}catch(e){alert(e.message)}
+}
+async function addMealFromRoom(bookingId){
+  await loadMeals();
+  const options=(cache.meals||[]).map(x=>`${x.id}: ${x.name_ar}`).join('\n');
+  const id=prompt('اكتب رقم باقة الوجبة:\n'+options);
+  if(!id)return;
+  try{await api(`/api/bookings/${bookingId}/add-meal-plan/${Number(id)}`,{method:'POST'});await loadAll();closeRoomDetails()}catch(e){alert(e.message)}
+}
+async function addServiceFromRoom(bookingId){
+  await loadServices();
+  const options=(cache.services||[]).map(x=>`${x.id}: ${x.name_ar} - ${x.sale_price}`).join('\n');
+  const id=prompt('اكتب رقم الخدمة:\n'+options);
+  if(!id)return;
+  const qty=Number(prompt('الكمية / عدد الأشخاص','1')||1);
+  try{await api(`/api/bookings/${bookingId}/add-service/${Number(id)}?quantity=${qty}`,{method:'POST'});await loadAll();closeRoomDetails()}catch(e){alert(e.message)}
+}
+async function markRoomAvailable(roomId){
+  try{
+    await api(`/api/rooms/${roomId}/mark-available`,{method:'POST'});
+    await loadRooms();await loadDashboard();await loadOwnerDashboard();
+    closeRoomDetails();
+  }catch(e){alert(e.message)}
+}
+async function markRoomMaintenance(roomId){
+  try{
+    await api(`/api/rooms/${roomId}/mark-maintenance`,{method:'POST'});
+    await loadRooms();await loadDashboard();await loadOwnerDashboard();
+    closeRoomDetails();
+  }catch(e){alert(e.message)}
+}
+async function loadCustomers(){cache.customers=await api('/api/customers');customersBody.innerHTML=cache.customers.map(x=>`<tr><td>${x.name}</td><td>${x.customer_type}</td><td>${x.phone||''}</td><td>${x.nationality||''}</td><td>${x.email||''}</td><td><button class="edit" onclick='openGeneric("customer",${JSON.stringify(x)})'>تعديل</button> <button class="danger" onclick="del('/api/customers/${x.id}')">حذف</button></td></tr>`).join('')}
+async function loadSuppliers(){cache.suppliers=await api('/api/suppliers');suppliersBody.innerHTML=cache.suppliers.map(x=>`<tr><td>${x.name}</td><td>${x.phone||''}</td><td>${x.email||''}</td><td>${x.opening_balance}</td><td><button class="edit" onclick='openGeneric("supplier",${JSON.stringify(x)})'>تعديل</button> <button class="danger" onclick="del('/api/suppliers/${x.id}')">حذف</button></td></tr>`).join('')}
+async function loadServices(){cache.services=await api('/api/services');servicesBody.innerHTML=cache.services.map(x=>`<tr><td>${x.name_ar}</td><td>${x.name_en||''}</td><td>${x.pricing_type}</td><td>${x.sale_price}</td><td>${x.cost_price}</td><td><button class="edit" onclick='openGeneric("service",${JSON.stringify(x)})'>تعديل</button> <button class="danger" onclick="del('/api/services/${x.id}')">حذف</button></td></tr>`).join('')}
+async function loadMeals(){cache.meals=await api('/api/meal-plans');mealsBody.innerHTML=cache.meals.map(x=>`<tr><td>${x.name_ar}</td><td>${x.name_en||''}</td><td>${x.breakfast_price}</td><td>${x.lunch_price}</td><td>${x.dinner_price}</td><td><button class="edit" onclick='openGeneric("meal",${JSON.stringify(x)})'>تعديل</button> <button class="danger" onclick="del('/api/meal-plans/${x.id}')">حذف</button></td></tr>`).join('')}
+async function loadWarehouses(){cache.warehouses=await api('/api/warehouses')}
+async function loadItems(){cache.items=await api('/api/items');itemsBody.innerHTML=cache.items.map(x=>`<tr><td>${x.name_ar}</td><td>${x.sku||''}</td><td>${x.unit||''}</td><td>${x.reorder_level}</td><td><button class="edit" onclick='openGeneric("item",${JSON.stringify(x)})'>تعديل</button> <button class="danger" onclick="del('/api/items/${x.id}')">حذف</button></td></tr>`).join('')}
+async function loadStock(){let d=await api('/api/stock-movements');stockBody.innerHTML=d.map(x=>`<tr><td>${x.warehouse_id}</td><td>${x.item_id}</td><td>${x.movement_type}</td><td>${x.quantity}</td><td>${x.unit_cost}</td><td>${String(x.created_at).slice(0,16)}</td></tr>`).join('')}
+async function loadCashboxes(){
+cache.cashboxes=await api('/api/cashboxes');
+const summaries=await api('/api/cashboxes-summary');
+cashboxesBody.innerHTML=summaries.map(x=>`<tr>
+<td>${x.name}</td><td>${x.opening_balance}</td><td>${x.income}</td><td>${x.expense}</td>
+<td><b>${x.current_balance}</b></td><td>${x.is_active?'نشطة':'موقوفة'}</td>
+<td><button class="edit" onclick='openGeneric("cashbox",${JSON.stringify(x)})'>تعديل</button> <button class="danger" onclick="del('/api/cashboxes/${x.id}')">حذف</button></td>
+</tr>`).join('')
+}
+async function loadFinance(){
+let d=await api('/api/finance');
+financeBody.innerHTML=d.map(x=>{
+const party=x.customer_name||x.supplier_name||'—';
+return `<tr>
+<td>${x.transaction_type==='Income'?'إيراد':'مصروف'}</td>
+<td>${x.cashbox_name||'—'}</td>
+<td>${party}</td>
+<td>${x.booking_no||'—'}</td>
+<td>${x.amount}</td>
+<td>${x.payment_method}</td>
+<td>${x.description||''}</td>
+<td>${String(x.created_at).slice(0,16).replace('T',' ')}</td>
+<td><button class="edit" onclick='openGeneric("finance",${JSON.stringify(x)})'>تعديل</button> <button class="danger" onclick="del('/api/finance/${x.id}')">حذف</button></td>
+</tr>`}).join('')
+}
+async function resetUserPassword(id,username){
+  const password=prompt(`أدخل كلمة المرور الجديدة للمستخدم ${username}`);
+  if(password===null)return;
+  if(password.length<4){alert('كلمة المرور يجب ألا تقل عن 4 أحرف');return}
+  try{
+    await api(`/api/users/${id}/reset-password`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({username:username,password:password})
+    });
+    alert('تم تغيير كلمة المرور بنجاح');
+  }catch(e){alert(e.message)}
+}
+async function loadUsers(){
+if(!hasPermission('users'))return;
+let d=await api('/api/users');
+usersBody.innerHTML=d.map(x=>`<tr>
+<td>${x.full_name}</td><td>${x.username}</td><td>${x.role}</td>
+<td>${(x.permissions||[]).join('، ')||'—'}</td>
+<td>${x.is_active?'Active':'Inactive'}</td>
+<td><button class="edit" onclick='openGeneric("user",${JSON.stringify(x)})'>تعديل</button> <button class="warn" onclick="resetUserPassword(${x.id},'${x.username}')">كلمة المرور</button> <button class="danger" onclick="del('/api/users/${x.id}')">حذف</button></td>
+</tr>`).join('')
+}
+async function loadBookings(){let d=await api('/api/bookings');cache.bookings=d;renderDashboardBookings();bookingsBody.innerHTML=d.map(x=>`<tr><td>${x.booking_no}</td><td>${x.customer_name}</td><td>${x.room_code}</td><td>${x.check_in} → ${x.check_out}</td><td>${x.grand_total}</td><td>${x.paid_amount}</td><td>${x.balance_due}</td><td>${x.status}</td><td><button class="edit" onclick="openBooking(${x.id})">تعديل</button> ${x.status==='Reserved'?`<button class="success" onclick="actionBooking(${x.id},'check-in')">وصول</button>`:''} ${x.status==='Checked-in'?`<button class="warn" onclick="actionBooking(${x.id},'check-out')">مغادرة</button>`:''}</td></tr>`).join('')}
+async function loadAll(){
+const jobs=[];
+if(hasPermission('dashboard'))jobs.push(loadDashboard(),loadOwnerDashboard());
+if(hasPermission('rooms'))jobs.push(loadRooms());
+if(hasPermission('customers'))jobs.push(loadCustomers());
+if(hasPermission('suppliers'))jobs.push(loadSuppliers());
+if(hasPermission('services'))jobs.push(loadServices());
+if(hasPermission('meals'))jobs.push(loadMeals());
+if(hasPermission('inventory'))jobs.push(loadWarehouses(),loadItems(),loadStock());
+if(hasPermission('finance'))jobs.push(loadCashboxes(),loadFinance(),loadAccounts(),loadReceipts(),loadJournal(),loadTrialBalance(),loadBalanceSheet(),loadCashFlow());
+if(hasPermission('users'))jobs.push(loadUsers());
+if(hasPermission('bookings'))jobs.push(loadBookings());
+await Promise.all(jobs)
+}
+
+let currentFinancePane='cash';
+function showFinancePane(name){
+  currentFinancePane=name;
+  document.querySelectorAll('.finance-pane').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('[data-fpane]').forEach(x=>x.classList.toggle('active',x.dataset.fpane===name));
+  const pane=document.getElementById('fpane_'+name);
+  if(pane)pane.classList.add('active');
+  localStorage.setItem('hotel_finance_pane',name);
+  if(name==='cash')loadCashboxes();
+  if(name==='receipts_log')loadReceipts();
+  if(name==='accounts_tree')loadAccounts();
+  if(name==='journal')loadJournal();
+  if(name==='trial')loadTrialBalance();if(name==='balance')loadBalanceSheet();if(name==='cashflow')loadCashFlow();
+  if(name==='receipt_in'||name==='receipt_out')prepareReceiptForms();
+}
+function receiptFields(type){
+  return `
+  <input type="hidden" name="receipt_type" value="${type}">
+  <div><label>التاريخ</label><input type="date" name="receipt_date" value="${new Date().toISOString().slice(0,10)}" required></div>
+  <div><label>الخزنة</label><select name="cashbox_id" required>${(cache.cashboxes||[]).map(x=>`<option value="${x.id}">${x.name}</option>`).join('')}</select></div>
+  <div><label>الحساب المقابل</label><select name="account_code" required>${(cache.accounts||[]).map(x=>`<option value="${x.code}">${x.code} - ${x.name_ar}</option>`).join('')}</select></div>
+  <div><label>المبلغ</label><input type="number" step="0.01" min="0.01" name="amount" required></div>
+  <div><label>طريقة الدفع</label><select name="payment_method"><option value="Cash">نقدي</option><option value="Card">بطاقة</option><option value="Bank Transfer">تحويل بنكي</option><option value="Wallet">محفظة</option></select></div>
+  <div><label>العميل / النزيل</label><select name="customer_id"><option value="">بدون</option>${(cache.customers||[]).map(x=>`<option value="${x.id}">${x.name}</option>`).join('')}</select></div>
+  <div><label>المورد</label><select name="supplier_id"><option value="">بدون</option>${(cache.suppliers||[]).map(x=>`<option value="${x.id}">${x.name}</option>`).join('')}</select></div>
+  <div><label>الحجز</label><select name="booking_id"><option value="">بدون</option>${(cache.bookings||[]).map(x=>`<option value="${x.id}">${x.booking_no} - ${x.customer_name}</option>`).join('')}</select></div>
+  <div style="grid-column:1/-1"><label>البيان</label><input name="description"></div>`;
+}
+async function prepareReceiptForms(){
+  await Promise.all([loadCashboxes(),loadAccounts(),loadCustomers(),loadSuppliers(),loadBookings()]);
+  receiptInFields.innerHTML=receiptFields('IN');
+  receiptOutFields.innerHTML=receiptFields('OUT');
+}
+async function submitReceipt(form){
+  const fd=new FormData(form),p=Object.fromEntries(fd);
+  ['cashbox_id','customer_id','supplier_id','booking_id'].forEach(k=>p[k]=p[k]?Number(p[k]):null);
+  p.amount=Number(p.amount);
+  await api('/api/finance/receipts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(p)});
+  form.reset();
+  alert(p.receipt_type==='IN'?'تم حفظ إيصال الاستلام وإضافته إلى الخزنة والقيود':'تم حفظ إيصال الصرف وإضافته إلى الخزنة والقيود');
+  await Promise.all([loadCashboxes(),loadReceipts(),loadJournal(),loadTrialBalance(),loadDashboard()]);
+}
+receiptInForm.onsubmit=async e=>{e.preventDefault();try{await submitReceipt(e.target)}catch(x){alert(x.message)}};
+receiptOutForm.onsubmit=async e=>{e.preventDefault();try{await submitReceipt(e.target)}catch(x){alert(x.message)}};
+
+async function loadAccounts(){
+  if(!hasPermission('finance'))return;
+  cache.accounts=await api('/api/finance/accounts');
+  accountsBody.innerHTML=cache.accounts.map(x=>`<tr><td>${x.code}</td><td>${x.name_ar}</td><td>${x.account_type}</td><td>${x.parent_code||'—'}</td><td>${x.opening_balance}</td></tr>`).join('');
+}
+accountForm.onsubmit=async e=>{
+  e.preventDefault();
+  const p=Object.fromEntries(new FormData(e.target));
+  p.opening_balance=Number(p.opening_balance||0);
+  try{
+    await api('/api/finance/accounts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(p)});
+    e.target.reset();alert('تم حفظ الحساب');loadAccounts()
+  }catch(x){alert(x.message)}
+};
+async function loadReceipts(){
+  if(!hasPermission('finance'))return;
+  const q=new URLSearchParams();
+  if(receiptFrom.value)q.set('date_from',receiptFrom.value);
+  if(receiptTo.value)q.set('date_to',receiptTo.value);
+  const d=await api('/api/finance/receipts?'+q.toString());
+  receiptsBody.innerHTML=d.map(x=>`<tr>
+  <td>${x.receipt_no}</td><td>${x.receipt_date}</td><td>${x.receipt_type==='IN'?'استلام':'صرف'}</td>
+  <td>${x.cashbox_name}</td><td>${x.customer_name||x.supplier_name||'—'}</td><td>${x.booking_no||'—'}</td>
+  <td>${x.amount}</td><td>${x.description||''}</td>
+  <td><button class="danger" onclick="deleteReceipt(${x.id})">حذف</button></td></tr>`).join('');
+}
+async function deleteReceipt(id){
+  if(!confirm('هل تريد حذف الإيصال وحركته من الخزنة والقيود؟'))return;
+  await api('/api/finance/receipts/'+id,{method:'DELETE'});
+  await Promise.all([loadReceipts(),loadCashboxes(),loadJournal(),loadTrialBalance(),loadDashboard()]);
+}
+async function loadJournal(){
+  if(!hasPermission('finance'))return;
+  const q=new URLSearchParams();
+  if(journalFrom.value)q.set('date_from',journalFrom.value);
+  if(journalTo.value)q.set('date_to',journalTo.value);
+  const d=await api('/api/finance/journal?'+q.toString());
+  journalBody.innerHTML=d.map(x=>`<tr><td>${x.entry_no}</td><td>${x.entry_date}</td><td>${x.account_code} - ${x.account_name}</td><td>${x.description||''}</td><td>${x.debit}</td><td>${x.credit}</td></tr>`).join('');
+}
+async function loadTrialBalance(){
+  if(!hasPermission('finance'))return;
+  const q=new URLSearchParams();
+  if(trialFrom.value)q.set('date_from',trialFrom.value);
+  if(trialTo.value)q.set('date_to',trialTo.value);
+  const d=await api('/api/finance/trial-balance?'+q.toString());
+  trialBody.innerHTML=d.map(x=>`<tr><td>${x.code}</td><td>${x.name_ar}</td><td>${x.debit}</td><td>${x.credit}</td><td>${x.balance}</td></tr>`).join('');
+}
+
+
+function printSection(target,title='تقرير'){
+  const element=typeof target==='string'?document.getElementById(target):target;
+  if(!element)return;
+  document.querySelectorAll('.print-area').forEach(x=>x.classList.remove('print-area'));
+  element.classList.add('print-area');
+  const oldTitle=document.title;
+  document.title=title;
+  window.print();
+  setTimeout(()=>{element.classList.remove('print-area');document.title=oldTitle},300);
+}
+
+
+async function loadBalanceSheet(){
+  if(!hasPermission('finance'))return;
+  const q=new URLSearchParams();
+  if(balanceDate.value)q.set('date_to',balanceDate.value);
+  const d=await api('/api/finance/balance-sheet?'+q.toString());
+
+  balanceAssetsBody.innerHTML=d.assets.map(x=>`<tr><td>${x.code}</td><td>${x.name_ar}</td><td>${x.balance}</td></tr>`).join('');
+  balanceLiabilitiesBody.innerHTML=d.liabilities.map(x=>`<tr><td>${x.code}</td><td>${x.name_ar}</td><td>${x.balance}</td></tr>`).join('');
+  balanceEquityBody.innerHTML=d.equity.map(x=>`<tr><td>${x.code}</td><td>${x.name_ar}</td><td>${x.balance}</td></tr>`).join('');
+
+  balanceAssetsTotal.textContent=d.totals.assets;
+  balanceProfit.textContent=d.totals.current_profit;
+  balanceRightTotal.textContent=d.totals.liabilities_and_equity;
+  balanceDifference.textContent=d.totals.difference;
+}
+
+async function loadCashFlow(){
+  if(!hasPermission('finance'))return;
+  if(!cache.cashboxes)await loadCashboxes();
+  cashFlowCashbox.innerHTML='<option value="">كل الخزائن</option>'+(cache.cashboxes||[]).map(x=>`<option value="${x.id}">${x.name}</option>`).join('');
+  const q=new URLSearchParams();
+  if(cashFlowFrom.value)q.set('date_from',cashFlowFrom.value);
+  if(cashFlowTo.value)q.set('date_to',cashFlowTo.value);
+  if(cashFlowCashbox.value)q.set('cashbox_id',cashFlowCashbox.value);
+  const d=await api('/api/finance/cash-flow?'+q.toString());
+  cfOpening.textContent=d.opening_balance;
+  cfIn.textContent=d.cash_in;
+  cfOut.textContent=d.cash_out;
+  cfNet.textContent=d.net_cash_flow;
+  cfClosing.textContent=d.closing_balance;
+  cashFlowBody.innerHTML=d.details.map(x=>`<tr>
+    <td>${String(x.date).slice(0,16).replace('T',' ')}</td>
+    <td>${x.cashbox_name||'—'}</td>
+    <td>${x.transaction_type==='Income'?'مقبوض':'مدفوع'}</td>
+    <td>${x.party||'—'}</td>
+    <td>${x.booking_no||'—'}</td>
+    <td>${x.description||''}</td>
+    <td>${x.inflow}</td>
+    <td>${x.outflow}</td>
+    <td>${x.running_balance}</td>
+  </tr>`).join('');
+}
+
+async function loadOwnerDashboard(){
+  if(!hasPermission('dashboard'))return;
+  const q=new URLSearchParams();
+  if(ownerFrom.value)q.set('date_from',ownerFrom.value);
+  if(ownerTo.value)q.set('date_to',ownerTo.value);
+  const d=await api('/api/owner-dashboard?'+q.toString());
+  const s=d.summary;
+  oTotalRooms.textContent=s.total_rooms;
+  oAvailable.textContent=s.available_rooms;
+  oOccupied.textContent=s.occupied_rooms;
+  oOccupancy.textContent=s.occupancy_rate+'%';
+  oActiveBookings.textContent=s.active_bookings;
+  oRevenue.textContent=s.recognized_revenue;
+  oCollections.textContent=s.collections;
+  oExpenses.textContent=s.expenses;
+  oProfit.textContent=s.estimated_profit;
+  oOutstanding.textContent=s.outstanding;
+  oCash.textContent=s.total_cash;
+  oLowStock.textContent=s.low_stock_count;
+
+  oRoomRevenue.textContent=d.revenue_breakdown.rooms;
+  oMealRevenue.textContent=d.revenue_breakdown.meals;
+  oServiceRevenue.textContent=d.revenue_breakdown.services;
+
+  ownerCashboxesBody.innerHTML=d.cashboxes.map(x=>`<tr><td>${x.name}</td><td>${x.balance}</td></tr>`).join('');
+  ownerBookingsBody.innerHTML=d.recent_bookings.map(x=>`<tr>
+    <td>${x.booking_no}</td><td>${x.customer_name}</td><td>${x.room_name}</td>
+    <td>${x.check_in} → ${x.check_out}</td><td>${x.status}</td><td>${x.grand_total}</td><td>${x.balance_due}</td>
+  </tr>`).join('');
+  ownerLowStockBody.innerHTML=d.low_stock.length?d.low_stock.map(x=>`<tr><td>${x.name_ar}</td><td>${x.balance}</td><td>${x.reorder_level}</td></tr>`).join(''):'<tr><td colspan="3">لا توجد أصناف منخفضة</td></tr>';
+}
+
+(async()=>{try{me=await api('/api/me');userInfo.textContent=me.full_name+' - '+me.role;showApp();loadAll();setTimeout(()=>showFinancePane(localStorage.getItem('hotel_finance_pane')||'cash'),300)}catch(e){showLogin()}})()
+</script></body></html>
