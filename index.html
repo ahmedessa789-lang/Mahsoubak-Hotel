@@ -140,9 +140,9 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#78aeb4;box-sh
 @media(max-width:1000px){.dashboard-shell{grid-template-columns:1fr}}
 
 </style></head><body>
-<div id="loginView" class="login"><div class="loginbox"><h2>محسوبك للفنادق</h2><p>Mahsoobak Hotel ERP</p><form id="loginForm">
+<div id="loginView" class="login"><div class="loginbox"><h2>محسوبك للفنادق</h2><p>Mahsoobak Hotel ERP <small style="color:#059669">● Online</small></p><form id="loginForm">
 <label>اسم المستخدم / Username</label><input name="username" value="admin" required><br><br>
-<label>كلمة المرور / Password</label><input type="password" name="password" value="admin123" required><br><br>
+<label>كلمة المرور / Password</label><input type="password" name="password" value="" required><br><br>
 <button class="primary" style="width:100%">دخول / Login</button></form></div></div>
 <div id="appView" class="app hidden">
 <aside><h1 id="brand">محسوبك للفنادق<br><small style="font-size:11px;color:#64748b;margin-right:48px">Mahsoobak Hotel ERP</small></h1>
@@ -375,6 +375,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#78aeb4;box-sh
 <div id="roomDetailsContent"></div>
 </div></div>
 <div id="modal" class="modal"><div class="box"><h3 id="modalTitle"></h3><form id="genericForm"><div id="formFields" class="grid"></div><div id="extraArea"></div><div class="actions"><button class="primary">حفظ</button><button type="button" onclick="closeModal()">إلغاء</button></div></form></div></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 let me=null,lang='ar',edit=null,cache={};
 
@@ -422,17 +423,175 @@ function goToRoomsByStatus(status){
   renderRoomMap();
 }
 
-const api=async(u,o={})=>{
-let r=await fetch(u,{credentials:'same-origin',...o});
-let d=await r.json().catch(()=>({}));
-if(r.status===401){showLogin();throw Error('Login required')}
-if(!r.ok){
-  let msg=d.detail||d.message||'Error';
-  if(Array.isArray(msg)) msg=msg.map(x=>x.msg||JSON.stringify(x)).join('\n');
-  else if(typeof msg==='object') msg=JSON.stringify(msg);
-  throw Error(msg);
+const SUPABASE_URL='https://bukflkzhrnlbfdysgyuo.supabase.co';
+const SUPABASE_PUBLISHABLE_KEY='sb_publishable_POCsj3GoHSelETkRyB_FsQ_T1qpmnPU';
+const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+const signupSb=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false},global:{headers:{'x-client-info':'mahsoobak-hotel-admin-signup'}}});
+
+function apiErr(e){throw Error(e?.message||e?.details||e?.hint||String(e||'Error'))}
+function num(v){return Number(v||0)}
+function qdate(v){return v?String(v).slice(0,10):''}
+function daysBetween(a,b){const x=new Date(a+'T00:00:00'),y=new Date(b+'T00:00:00');return Math.max(1,Math.round((y-x)/86400000)||1)}
+function parsePayload(o){try{return o?.body?JSON.parse(o.body):{}}catch{return {}}}
+function parseUrl(u){const z=new URL(u,location.href);return {path:z.pathname,params:z.searchParams}}
+async function sel(table,columns='*') {const {data,error}=await sb.from(table).select(columns);if(error)apiErr(error);return data||[]}
+async function one(table,id,columns='*'){const {data,error}=await sb.from(table).select(columns).eq('id',id).maybeSingle();if(error)apiErr(error);return data}
+async function ins(table,p){const {data,error}=await sb.from(table).insert(p).select().maybeSingle();if(error)apiErr(error);return data}
+async function upd(table,id,p){const {data,error}=await sb.from(table).update(p).eq('id',id).select().maybeSingle();if(error)apiErr(error);return data}
+async function rem(table,id){const {error}=await sb.from(table).delete().eq('id',id);if(error)apiErr(error);return {ok:true}}
+
+async function ensureInitialData(){
+  const {count,error}=await sb.from('rooms').select('*',{count:'exact',head:true}); if(error)apiErr(error);
+  if((count||0)===0){
+    const rooms=[];
+    for(let i=1;i<=26;i++)rooms.push({room_code:`R${String(i).padStart(3,'0')}`,room_name:`غرفة ${i}`,room_type:'Room',base_beds:2,max_beds:3,base_price_per_night:0,extra_bed_price_per_night:0,status:'Available'});
+    for(let i=1;i<=4;i++)rooms.push({room_code:`S${String(i).padStart(3,'0')}`,room_name:`جناح ${i}`,room_type:'Suite',base_beds:2,max_beds:4,base_price_per_night:0,extra_bed_price_per_night:0,status:'Available'});
+    const {error:e}=await sb.from('rooms').insert(rooms); if(e)apiErr(e);
+  }
+  const {count:cb}=await sb.from('cashboxes').select('*',{count:'exact',head:true});
+  if((cb||0)===0)await sb.from('cashboxes').insert({name:'الخزنة الرئيسية',opening_balance:0,is_active:true});
+  const {count:ac}=await sb.from('accounts').select('*',{count:'exact',head:true});
+  if((ac||0)===0){
+    await sb.from('accounts').insert([
+      {code:'1000',name_ar:'النقدية والخزائن',name_en:'Cash',account_type:'Asset',normal_side:'debit'},
+      {code:'1100',name_ar:'العملاء والمدينون',name_en:'Accounts Receivable',account_type:'Asset',normal_side:'debit'},
+      {code:'2000',name_ar:'الموردون والدائنون',name_en:'Accounts Payable',account_type:'Liability',normal_side:'credit'},
+      {code:'3000',name_ar:'حقوق الملكية',name_en:'Equity',account_type:'Equity',normal_side:'credit'},
+      {code:'4000',name_ar:'إيرادات الإقامة',name_en:'Room Revenue',account_type:'Revenue',normal_side:'credit'},
+      {code:'4100',name_ar:'إيرادات الخدمات',name_en:'Service Revenue',account_type:'Revenue',normal_side:'credit'},
+      {code:'4200',name_ar:'إيرادات الوجبات',name_en:'Meal Revenue',account_type:'Revenue',normal_side:'credit'},
+      {code:'5000',name_ar:'المصروفات العمومية والإدارية',name_en:'General & Administrative Expenses',account_type:'Expense',normal_side:'debit'}
+    ]);
+  }
 }
-return d
+
+async function bookingExpanded(id=null){
+  let q=sb.from('bookings').select(`*,customers(name),rooms(room_code,room_name,room_type,base_beds,max_beds,base_price_per_night,extra_bed_price_per_night),meal_plans(name_ar),booking_services(id,service_id,quantity,unit_price,total_price,services(name_ar))`).order('id',{ascending:false});
+  if(id!=null)q=q.eq('id',id);
+  const {data,error}=await q; if(error)apiErr(error);
+  const rows=(data||[]).map(x=>({...x,customer_name:x.customers?.name||'',room_code:x.rooms?.room_code||'',room_name:x.rooms?.room_name||'',meal_plan:x.meal_plans?.name_ar||null,services:(x.booking_services||[]).map(s=>({id:s.id,service_id:s.service_id,quantity:num(s.quantity),unit_price:num(s.unit_price),total_price:num(s.total_price),name:s.services?.name_ar||''}))}));
+  return id!=null?(rows[0]||null):rows;
+}
+async function recalcBooking(id,patch={},servicesOverride=null){
+  const current=await bookingExpanded(id); if(!current)throw Error('الحجز غير موجود');
+  const p={...current,...patch};
+  const room=await one('rooms',p.room_id); if(!room)throw Error('الغرفة غير موجودة');
+  let meal=null;if(p.meal_plan_id)meal=await one('meal_plans',p.meal_plan_id);
+  const nights=daysBetween(p.check_in,p.check_out),persons=num(p.adults)+num(p.children);
+  const room_total=num(room.base_price_per_night)*nights;
+  const extra_beds_total=num(p.extra_beds)*num(room.extra_bed_price_per_night)*nights;
+  const meals_total=meal?(num(meal.breakfast_price)+num(meal.lunch_price)+num(meal.dinner_price))*Math.max(1,persons)*nights:0;
+  let services=servicesOverride;
+  if(services==null){const {data,error}=await sb.from('booking_services').select('*').eq('booking_id',id);if(error)apiErr(error);services=data||[]}
+  const services_total=(services||[]).reduce((s,x)=>s+num(x.quantity)*num(x.unit_price),0);
+  const grand_total=Math.max(0,room_total+extra_beds_total+meals_total+services_total-num(p.discount)+num(p.tax));
+  const paid_amount=num(p.paid_amount);
+  const row={customer_id:num(p.customer_id),room_id:num(p.room_id),meal_plan_id:p.meal_plan_id?num(p.meal_plan_id):null,check_in:p.check_in,check_out:p.check_out,adults:num(p.adults),children:num(p.children),extra_beds:num(p.extra_beds),room_total,extra_beds_total,meals_total,services_total,discount:num(p.discount),tax:num(p.tax),grand_total,paid_amount,balance_due:grand_total-paid_amount};
+  const {data,error}=await sb.from('bookings').update(row).eq('id',id).select().single();if(error)apiErr(error);return data;
+}
+async function saveBooking(p,id=null){
+  const services=p.services||[]; delete p.services;
+  if(!p.check_in||!p.check_out)throw Error('يجب إدخال تاريخ الوصول والمغادرة');
+  const room=await one('rooms',num(p.room_id)); if(!room)throw Error('الغرفة غير موجودة');
+  const base={customer_id:num(p.customer_id),room_id:num(p.room_id),meal_plan_id:p.meal_plan_id?num(p.meal_plan_id):null,check_in:p.check_in,check_out:p.check_out,adults:num(p.adults),children:num(p.children),extra_beds:num(p.extra_beds),discount:num(p.discount),tax:num(p.tax),paid_amount:num(p.paid_amount)};
+  let row;
+  if(id==null){
+    base.booking_no='BK-'+new Date().toISOString().replace(/\D/g,'').slice(0,14);base.status='Reserved';
+    row=await ins('bookings',{...base,room_total:0,extra_beds_total:0,meals_total:0,services_total:0,grand_total:0,balance_due:0}); id=row.id;
+  }else{row=await upd('bookings',id,base);}
+  await sb.from('booking_services').delete().eq('booking_id',id);
+  if(services.length){const rr=services.map(s=>({booking_id:id,service_id:num(s.service_id),quantity:num(s.quantity)||1,unit_price:num(s.unit_price),total_price:(num(s.quantity)||1)*num(s.unit_price)}));const {error}=await sb.from('booking_services').insert(rr);if(error)apiErr(error)}
+  row=await recalcBooking(id,base,services);
+  await sb.from('rooms').update({status:row.status==='Checked-in'?'Occupied':'Reserved'}).eq('id',row.room_id);
+  return bookingExpanded(id);
+}
+async function cashboxSummaries(){
+  const boxes=await sel('cashboxes'); const tx=await sel('finance_transactions'); const rc=await sel('cash_receipts');
+  return boxes.map(b=>{let income=0,expense=0;tx.filter(x=>x.cashbox_id===b.id).forEach(x=>x.transaction_type==='Income'?income+=num(x.amount):expense+=num(x.amount));rc.filter(x=>x.cashbox_id===b.id).forEach(x=>x.receipt_type==='IN'?income+=num(x.amount):expense+=num(x.amount));return {...b,income,expense,current_balance:num(b.opening_balance)+income-expense}})
+}
+async function financeRows(){
+  const {data,error}=await sb.from('finance_transactions').select('*,cashboxes(name),customers(name),suppliers(name),bookings(booking_no)').order('created_at',{ascending:false});if(error)apiErr(error);
+  return (data||[]).map(x=>({...x,cashbox_name:x.cashboxes?.name||'',customer_name:x.customers?.name||'',supplier_name:x.suppliers?.name||'',booking_no:x.bookings?.booking_no||''}));
+}
+async function receiptRows(params){
+  let q=sb.from('cash_receipts').select('*,cashboxes(name),customers(name),suppliers(name),bookings(booking_no)').order('receipt_date',{ascending:false});
+  if(params.get('date_from'))q=q.gte('receipt_date',params.get('date_from'));if(params.get('date_to'))q=q.lte('receipt_date',params.get('date_to'));
+  const {data,error}=await q;if(error)apiErr(error);return (data||[]).map(x=>({...x,cashbox_name:x.cashboxes?.name||'',customer_name:x.customers?.name||'',supplier_name:x.suppliers?.name||'',booking_no:x.bookings?.booking_no||''}));
+}
+async function journalRows(params){
+  let q=sb.from('journal_entries').select('*').order('entry_date',{ascending:false}).order('id',{ascending:false});if(params.get('date_from'))q=q.gte('entry_date',params.get('date_from'));if(params.get('date_to'))q=q.lte('entry_date',params.get('date_to'));
+  const {data,error}=await q;if(error)apiErr(error);const aa=await sel('accounts');const m=Object.fromEntries(aa.map(x=>[x.code,x.name_ar]));return (data||[]).map(x=>({...x,account_name:m[x.account_code]||''}));
+}
+async function trialRows(params){
+  const aa=await sel('accounts');const jj=await journalRows(params);return aa.map(a=>{let debit=0,credit=0;jj.filter(j=>j.account_code===a.code).forEach(j=>{debit+=num(j.debit);credit+=num(j.credit)});const opening=num(a.opening_balance);const balance=a.normal_side==='credit'?opening+credit-debit:opening+debit-credit;return {...a,debit,credit,balance}});
+}
+async function dashboardData(){
+  const rooms=await sel('rooms'),bookings=await bookingExpanded(),customers=await sel('customers'),tx=await sel('finance_transactions'),rc=await sel('cash_receipts');
+  const active=bookings.filter(x=>['Reserved','Checked-in'].includes(x.status));const revenue=bookings.reduce((s,x)=>s+num(x.grand_total),0);const collections=bookings.reduce((s,x)=>s+num(x.paid_amount),0)+rc.filter(x=>x.receipt_type==='IN'&&!x.booking_id).reduce((s,x)=>s+num(x.amount),0);const expenses=tx.filter(x=>x.transaction_type==='Expense').reduce((s,x)=>s+num(x.amount),0)+rc.filter(x=>x.receipt_type==='OUT').reduce((s,x)=>s+num(x.amount),0);return {rooms:rooms.length,available_rooms:rooms.filter(x=>x.status==='Available').length,bookings:active.length,customers:customers.length,revenue,collections,expenses,outstanding:bookings.reduce((s,x)=>s+num(x.balance_due),0)};
+}
+async function ownerData(params){
+  const rooms=await sel('rooms'),bookings=await bookingExpanded(),boxes=await cashboxSummaries(),items=await sel('items'),moves=await sel('stock_movements');const d=await dashboardData();
+  const active=bookings.filter(x=>['Reserved','Checked-in'].includes(x.status));const occupied=rooms.filter(x=>x.status==='Occupied').length;const low=items.map(i=>{const balance=moves.filter(m=>m.item_id===i.id).reduce((s,m)=>s+(m.movement_type==='IN'?num(m.quantity):-num(m.quantity)),0);return {...i,balance}}).filter(i=>i.balance<=num(i.reorder_level));
+  return {summary:{total_rooms:rooms.length,available_rooms:rooms.filter(x=>x.status==='Available').length,occupied_rooms:occupied,occupancy_rate:rooms.length?Math.round(occupied*100/rooms.length):0,active_bookings:active.length,recognized_revenue:d.revenue,collections:d.collections,expenses:d.expenses,estimated_profit:d.revenue-d.expenses,outstanding:d.outstanding,total_cash:boxes.reduce((s,x)=>s+num(x.current_balance),0),low_stock_count:low.length},revenue_breakdown:{rooms:bookings.reduce((s,x)=>s+num(x.room_total)+num(x.extra_beds_total),0),meals:bookings.reduce((s,x)=>s+num(x.meals_total),0),services:bookings.reduce((s,x)=>s+num(x.services_total),0)},cashboxes:boxes.map(x=>({name:x.name,balance:x.current_balance})),recent_bookings:bookings.slice(0,10),low_stock:low};
+}
+async function cashFlowData(params){
+  const boxes=await sel('cashboxes'),tx=await financeRows(),rc=await receiptRows(new URLSearchParams());const boxid=params.get('cashbox_id')?num(params.get('cashbox_id')):null;const df=params.get('date_from'),dt=params.get('date_to');const opening=boxes.filter(b=>!boxid||b.id===boxid).reduce((s,b)=>s+num(b.opening_balance),0);
+  let rows=[];tx.forEach(x=>rows.push({date:x.created_at,cashbox_id:x.cashbox_id,cashbox_name:x.cashbox_name,transaction_type:x.transaction_type,party:x.customer_name||x.supplier_name||'',booking_no:x.booking_no||'',description:x.description||'',amount:num(x.amount)}));rc.forEach(x=>rows.push({date:x.receipt_date,cashbox_id:x.cashbox_id,cashbox_name:x.cashbox_name,transaction_type:x.receipt_type==='IN'?'Income':'Expense',party:x.customer_name||x.supplier_name||'',booking_no:x.booking_no||'',description:x.description||'',amount:num(x.amount)}));rows=rows.filter(x=>(!boxid||x.cashbox_id===boxid));let openingAdj=opening;rows.filter(x=>df&&qdate(x.date)<df).forEach(x=>openingAdj+=x.transaction_type==='Income'?x.amount:-x.amount);rows=rows.filter(x=>(!df||qdate(x.date)>=df)&&(!dt||qdate(x.date)<=dt)).sort((a,b)=>new Date(a.date)-new Date(b.date));let run=openingAdj,cash_in=0,cash_out=0;const details=rows.map(x=>{if(x.transaction_type==='Income'){cash_in+=x.amount;run+=x.amount}else{cash_out+=x.amount;run-=x.amount}return {...x,inflow:x.transaction_type==='Income'?x.amount:0,outflow:x.transaction_type==='Expense'?x.amount:0,running_balance:run}});return {opening_balance:openingAdj,cash_in,cash_out,net_cash_flow:cash_in-cash_out,closing_balance:run,details};
+}
+
+const simpleMap={'/api/rooms':'rooms','/api/customers':'customers','/api/suppliers':'suppliers','/api/services':'services','/api/meal-plans':'meal_plans','/api/warehouses':'warehouses','/api/items':'items','/api/stock-movements':'stock_movements','/api/cashboxes':'cashboxes','/api/finance/accounts':'accounts'};
+const api=async(u,o={})=>{
+  const method=(o.method||'GET').toUpperCase(),body=parsePayload(o),{path,params}=parseUrl(u);
+  if(path==='/api/login'&&method==='POST'){
+    let email=(body.username||'').trim().toLowerCase();if(email==='admin')email='yamani@hotel.com';
+    const {data,error}=await sb.auth.signInWithPassword({email,password:body.password});if(error)apiErr(error);return {ok:true,user:data.user};
+  }
+  if(path==='/api/logout'){const {error}=await sb.auth.signOut();if(error)apiErr(error);return {ok:true}}
+  if(path==='/api/me'){
+    const {data:{user},error}=await sb.auth.getUser();if(error||!user)throw Error('Login required');const {data:p,error:pe}=await sb.from('profiles').select('*').eq('id',user.id).maybeSingle();if(pe)apiErr(pe);if(!p||p.is_active===false){await sb.auth.signOut();throw Error('هذا المستخدم غير نشط')};return {...p,email:user.email};
+  }
+  if(path==='/api/dashboard')return dashboardData();
+  if(path==='/api/owner-dashboard')return ownerData(params);
+  if(path==='/api/room-map'){
+    const rooms=await sel('rooms');const bookings=await bookingExpanded();return rooms.map(r=>({...r,booking:bookings.find(b=>b.room_id===r.id&&['Reserved','Checked-in'].includes(b.status))||null}));
+  }
+  if(path==='/api/cashboxes-summary')return cashboxSummaries();
+  if(path==='/api/finance'&&method==='GET')return financeRows();
+  if(path==='/api/finance'&&method==='POST')return ins('finance_transactions',body);
+  let m=path.match(/^\/api\/finance\/(\d+)$/);if(m){return method==='DELETE'?rem('finance_transactions',num(m[1])):upd('finance_transactions',num(m[1]),body)}
+  if(path==='/api/bookings'&&method==='GET')return bookingExpanded();
+  if(path==='/api/bookings'&&method==='POST')return saveBooking(body);
+  m=path.match(/^\/api\/bookings\/(\d+)$/);if(m){if(method==='GET')return bookingExpanded(num(m[1]));if(method==='PUT')return saveBooking(body,num(m[1]))}
+  m=path.match(/^\/api\/bookings\/(\d+)\/(check-in|check-out)$/);if(m&&method==='POST'){const id=num(m[1]),a=m[2],b=await bookingExpanded(id);if(!b)throw Error('الحجز غير موجود');const status=a==='check-in'?'Checked-in':'Checked-out';await upd('bookings',id,{status});await upd('rooms',b.room_id,{status:a==='check-in'?'Occupied':'Cleaning'});return {ok:true}}
+  m=path.match(/^\/api\/bookings\/(\d+)\/add-extra-bed$/);if(m){const id=num(m[1]),b=await bookingExpanded(id);await recalcBooking(id,{extra_beds:num(b.extra_beds)+1});return {ok:true}}
+  m=path.match(/^\/api\/bookings\/(\d+)\/add-meal-plan\/(\d+)$/);if(m){await recalcBooking(num(m[1]),{meal_plan_id:num(m[2])});return {ok:true}}
+  m=path.match(/^\/api\/bookings\/(\d+)\/add-service\/(\d+)$/);if(m){const bid=num(m[1]),sid=num(m[2]),qty=num(params.get('quantity'))||1,s=await one('services',sid);if(!s)throw Error('الخدمة غير موجودة');await ins('booking_services',{booking_id:bid,service_id:sid,quantity:qty,unit_price:num(s.sale_price),total_price:qty*num(s.sale_price)});await recalcBooking(bid);return {ok:true}}
+  m=path.match(/^\/api\/rooms\/(\d+)\/mark-(available|maintenance)$/);if(m){return upd('rooms',num(m[1]),{status:m[2]==='available'?'Available':'Maintenance'})}
+  if(path==='/api/finance/receipts'&&method==='GET')return receiptRows(params);
+  if(path==='/api/finance/receipts'&&method==='POST'){
+    const {data:{user}}=await sb.auth.getUser();const rec={...body,receipt_no:`RC-${Date.now()}`,created_by:user?.id||null};const r=await ins('cash_receipts',rec);const no='JE-'+Date.now(),d=body.receipt_type==='IN';const lines=[{entry_no:no,entry_date:body.receipt_date,source_type:'receipt',source_id:r.id,account_code:d?'1000':body.account_code,description:body.description||'',debit:num(body.amount),credit:0},{entry_no:no,entry_date:body.receipt_date,source_type:'receipt',source_id:r.id,account_code:d?body.account_code:'1000',description:body.description||'',debit:0,credit:num(body.amount)}];const {error}=await sb.from('journal_entries').insert(lines);if(error)apiErr(error);return r;
+  }
+  m=path.match(/^\/api\/finance\/receipts\/(\d+)$/);if(m&&method==='DELETE'){await sb.from('journal_entries').delete().eq('source_type','receipt').eq('source_id',num(m[1]));return rem('cash_receipts',num(m[1]))}
+  if(path==='/api/finance/journal')return journalRows(params);
+  if(path==='/api/finance/trial-balance')return trialRows(params);
+  if(path==='/api/finance/balance-sheet'){
+    const t=await trialRows(new URLSearchParams(params.get('date_to')?`date_to=${params.get('date_to')}`:''));const assets=t.filter(x=>x.account_type==='Asset').map(x=>({code:x.code,name_ar:x.name_ar,balance:x.balance}));const liabilities=t.filter(x=>x.account_type==='Liability').map(x=>({code:x.code,name_ar:x.name_ar,balance:x.balance}));const equity=t.filter(x=>x.account_type==='Equity').map(x=>({code:x.code,name_ar:x.name_ar,balance:x.balance}));const rev=t.filter(x=>x.account_type==='Revenue').reduce((s,x)=>s+x.balance,0),exp=t.filter(x=>x.account_type==='Expense').reduce((s,x)=>s+x.balance,0),profit=rev-exp,at=assets.reduce((s,x)=>s+x.balance,0),rt=liabilities.reduce((s,x)=>s+x.balance,0)+equity.reduce((s,x)=>s+x.balance,0)+profit;return {assets,liabilities,equity,totals:{assets:at,current_profit:profit,liabilities_and_equity:rt,difference:at-rt}};
+  }
+  if(path==='/api/finance/cash-flow')return cashFlowData(params);
+  if(path==='/api/users'&&method==='GET'){
+    const {data,error}=await sb.from('profiles').select('*').order('created_at',{ascending:true});if(error)apiErr(error);return data||[];
+  }
+  if(path==='/api/users'&&method==='POST'){
+    let email=(body.username||'').trim().toLowerCase();if(!email.includes('@'))throw Error('اكتب البريد الإلكتروني في خانة اسم المستخدم عند إنشاء مستخدم جديد');
+    const {data,error}=await signupSb.auth.signUp({email,password:body.password,options:{data:{full_name:body.full_name,username:email.split('@')[0],role:body.role,permissions:body.permissions||[]}}});if(error)apiErr(error);return {id:data.user?.id,full_name:body.full_name,username:email.split('@')[0],email,role:body.role,permissions:body.permissions||[],is_active:true};
+  }
+  m=path.match(/^\/api\/users\/([0-9a-f-]+)$/i);if(m){if(method==='DELETE')return upd('profiles',m[1],{is_active:false});if(method==='PUT'){const p={...body};delete p.password;if(p.username&&p.username.includes('@')){p.email=p.username;p.username=p.username.split('@')[0]}return upd('profiles',m[1],p)}}
+  m=path.match(/^\/api\/users\/([0-9a-f-]+)\/reset-password$/i);if(m&&method==='POST'){const {data:{user}}=await sb.auth.getUser();if(user?.id===m[1]){const {error}=await sb.auth.updateUser({password:body.password});if(error)apiErr(error);return {ok:true}}throw Error('تغيير كلمة مرور مستخدم آخر يحتاج رسالة Reset Password من Supabase Auth')}
+  if(simpleMap[path]){
+    const table=simpleMap[path];if(method==='GET'){const {data,error}=await sb.from(table).select('*').order('id',{ascending:true});if(error)apiErr(error);return data||[]}if(method==='POST')return ins(table,body);
+  }
+  for(const [base,table] of Object.entries(simpleMap)){if(path.startsWith(base+'/')){const id=path.slice(base.length+1);if(/^\d+$/.test(id)){if(method==='PUT')return upd(table,num(id),body);if(method==='DELETE')return rem(table,num(id));if(method==='GET')return one(table,num(id))}}}
+  throw Error('Unsupported operation: '+method+' '+path);
 }
 function showLogin(){loginView.classList.remove('hidden');appView.classList.add('hidden')}
 function hasPermission(p){return me && (me.role==='Admin' || (me.permissions||[]).includes(p))}
@@ -463,6 +622,7 @@ p.username=(p.username||'').trim().toLowerCase();
 try{
   await api('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(p)});
   me=await api('/api/me');
+  await ensureInitialData();
   userInfo.textContent=me.full_name+' - '+me.role;
   showApp();
   loadAll();
@@ -481,7 +641,7 @@ meal:[['name_ar','الاسم العربي','text'],['name_en','English Name','te
 warehouse:[['name','اسم المخزن','text'],['location','الموقع','text']],
 item:[['name_ar','اسم الصنف','text'],['name_en','English Name','text'],['sku','SKU','text'],['category','التصنيف','text'],['unit','الوحدة','text'],['reorder_level','حد إعادة الطلب','number']],
 cashbox:[['name','اسم الخزنة','text'],['opening_balance','رصيد افتتاحي','number']],
-user:[['full_name','الاسم','text'],['username','اسم المستخدم','text'],['password','كلمة المرور','password']]
+user:[['full_name','الاسم','text'],['username','البريد الإلكتروني للمستخدم','email'],['password','كلمة المرور','password']]
 };
 const endpoints={room:'/api/rooms',customer:'/api/customers',supplier:'/api/suppliers',service:'/api/services',meal:'/api/meal-plans',warehouse:'/api/warehouses',item:'/api/items',cashbox:'/api/cashboxes',user:'/api/users'}
 function field(n,l,t='text'){return `<div><label>${l}</label><input name="${n}" type="${t}" ${t==='number'?'step="0.01"':''} required></div>`}
@@ -568,7 +728,7 @@ async function actionBooking(id,a){
     await loadAll();
   }catch(e){alert(e.message)}
 }
-async function loadDashboard(){let d=await api('/api/dashboard');dRooms.textContent=d.rooms;dAvail.textContent=d.available_rooms;dBookings.textContent=d.bookings;dCustomers.textContent=d.customers;dRevenue.textContent=d.revenue;dCollections.textContent=d.collections;dExpenses.textContent=d.expenses;dOutstanding&&(dOutstanding.textContent=d.outstanding);if(window.dProfitDemo)dProfitDemo.textContent=(d.revenue-d.expenses).toLocaleString('en-US')}
+async function loadDashboard(){let d=await api('/api/dashboard');if(window.dRooms)dRooms.textContent=d.rooms;if(window.dAvail)dAvail.textContent=d.available_rooms;if(window.dBookings)dBookings.textContent=d.bookings;if(window.dRevenue)dRevenue.textContent=Number(d.revenue||0).toLocaleString('en-US');if(window.dExpenses)dExpenses.textContent=Number(d.expenses||0).toLocaleString('en-US');if(window.dProfitDemo)dProfitDemo.textContent=(Number(d.revenue||0)-Number(d.expenses||0)).toLocaleString('en-US')}
 let roomMapFilter='Room';
 function setRoomMapFilter(filter){
   roomMapFilter=filter;
@@ -697,7 +857,7 @@ cashboxesBody.innerHTML=summaries.map(x=>`<tr>
 }
 async function loadFinance(){
 let d=await api('/api/finance');
-financeBody.innerHTML=d.map(x=>{
+if(!window.financeBody)return; financeBody.innerHTML=d.map(x=>{
 const party=x.customer_name||x.supplier_name||'—';
 return `<tr>
 <td>${x.transaction_type==='Income'?'إيراد':'مصروف'}</td>
@@ -931,5 +1091,5 @@ async function loadOwnerDashboard(){
   ownerLowStockBody.innerHTML=d.low_stock.length?d.low_stock.map(x=>`<tr><td>${x.name_ar}</td><td>${x.balance}</td><td>${x.reorder_level}</td></tr>`).join(''):'<tr><td colspan="3">لا توجد أصناف منخفضة</td></tr>';
 }
 
-(async()=>{try{me=await api('/api/me');userInfo.textContent=me.full_name+' - '+me.role;showApp();loadAll();setTimeout(()=>showFinancePane(localStorage.getItem('hotel_finance_pane')||'cash'),300)}catch(e){showLogin()}})()
+(async()=>{try{me=await api('/api/me');await ensureInitialData();userInfo.textContent=me.full_name+' - '+me.role;showApp();loadAll();setTimeout(()=>showFinancePane(localStorage.getItem('hotel_finance_pane')||'cash'),300)}catch(e){showLogin()}})()
 </script></body></html>
