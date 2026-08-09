@@ -427,7 +427,7 @@ function goToRoomsByStatus(status){
 }
 
 const SUPABASE_URL='https://bukflkzhrnlbfdysgyuo.supabase.co';
-const SUPABASE_PUBLISHABLE_KEY='sb_publishable_POCsj3GoHSelETkRyB_FsQ_T1qpmnPU';
+const SUPABASE_PUBLISHABLE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ1a2Zsa3pocm5sYmZkeXN5Z3VvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYyNzYzNjQsImV4cCI6MjEwMTg1MjM2NH0.1u_7x02UhLjHZhIV_YQGKYPwCjdeSjES9DGOT9bUZVM';
 const SUPABASE_FETCH = (...args) => globalThis.fetch(...args);
 if(!window.supabase || typeof window.supabase.createClient!=='function'){
   throw new Error('تعذر تحميل مكتبة Supabase JS من CDN');
