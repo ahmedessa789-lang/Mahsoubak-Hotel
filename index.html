@@ -426,7 +426,7 @@ function goToRoomsByStatus(status){
   renderRoomMap();
 }
 
-const SUPABASE_URL='https://bukflkzhrnlbfdysgyuo.supabase.co';
+const SUPABASE_URL='https://bukflkzhrnlbfdysyguo.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ1a2Zsa3pocm5sYmZkeXN5Z3VvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYyNzYzNjQsImV4cCI6MjEwMTg1MjM2NH0.1u_7x02UhLjHZhIV_YQGKYPwCjdeSjES9DGOT9bUZVM';
 const SUPABASE_FETCH = (...args) => globalThis.fetch(...args);
 if(!window.supabase || typeof window.supabase.createClient!=='function'){
@@ -454,65 +454,30 @@ function detailedError(e,stage='Supabase'){
   return parts.join(' | ');
 }
 
-async function fetchProbe(name,url,options={}){
-  const t0=performance.now();
-  try{
-    const controller=new AbortController();
-    const timer=setTimeout(()=>controller.abort(),10000);
-    const res=await fetch(url,{...options,signal:controller.signal,cache:'no-store'});
-    clearTimeout(timer);
-    const text=await res.text();
-    return {ok:true,name,status:res.status,ms:Math.round(performance.now()-t0),text:text.slice(0,500)};
-  }catch(e){
-    return {ok:false,name,ms:Math.round(performance.now()-t0),error:(e?.name||'Error')+': '+(e?.message||String(e))};
-  }
-}
 async function runSupabaseDiagnostic(){
   const result={sdk:false,auth:false,data:false,session:false,details:[]};
   result.sdk=!!(window.supabase&&window.supabase.createClient);
-  result.details.push('1) Supabase SDK: '+(result.sdk?'OK':'FAILED'));
-  result.details.push('2) Project URL: '+SUPABASE_URL);
-  result.details.push('3) Browser: '+navigator.userAgent);
-  result.details.push('4) Page origin: '+location.origin);
-
-  const commonHeaders={apikey:SUPABASE_PUBLISHABLE_KEY,Authorization:'Bearer '+SUPABASE_PUBLISHABLE_KEY};
-  const authProbe=await fetchProbe('Auth',SUPABASE_URL+'/auth/v1/settings',{headers:{apikey:SUPABASE_PUBLISHABLE_KEY}});
-  if(authProbe.ok){
-    result.auth=true;
-    result.details.push(`5) Direct Auth fetch: HTTP ${authProbe.status} in ${authProbe.ms}ms`);
-  }else result.details.push('5) Direct Auth fetch FAILED: '+authProbe.error);
-
-  const restProbe=await fetchProbe('REST',SUPABASE_URL+'/rest/v1/profiles?select=id&limit=1',{headers:commonHeaders});
-  if(restProbe.ok){
-    result.data=true;
-    result.details.push(`6) Direct Data API fetch: HTTP ${restProbe.status} in ${restProbe.ms}ms`);
-    result.details.push('   REST response: '+(restProbe.text||'(empty)'));
-  }else result.details.push('6) Direct Data API fetch FAILED: '+restProbe.error);
-
+  result.details.push('SDK: '+(result.sdk?'OK':'FAILED'));
   try{
     const {data,error}=await sb.auth.getSession();
     if(error) throw error;
+    result.auth=true;
     result.session=!!data?.session;
-    result.details.push('7) SDK getSession: OK; session='+(result.session?'YES':'NO'));
-  }catch(e){ result.details.push('7) SDK getSession FAILED: '+detailedError(e,'Auth SDK')); }
-
+    result.details.push('Auth endpoint: OK; session='+(result.session?'YES':'NO'));
+  }catch(e){ result.details.push(detailedError(e,'Auth endpoint')); }
   try{
     const {data,error}=await sb.from('profiles').select('id').limit(1);
-    if(error) result.details.push('8) SDK profiles response: '+detailedError(error,'profiles'));
-    else result.details.push('8) SDK profiles: OK; rows='+(data?.length||0));
-  }catch(e){ result.details.push('8) SDK profiles FETCH FAILED: '+detailedError(e,'Data SDK')); }
-
-  if(!authProbe.ok && !restProbe.ok){
-    result.details.push('RESULT: المتصفح لا يستطيع الوصول إلى نطاق Supabase نفسه. المشكلة Network/DNS/Firewall وليست Login أو RLS.');
-  }else if(authProbe.ok && !restProbe.ok){
-    result.details.push('RESULT: Auth reachable لكن REST/Data API لا يصل من المتصفح. راجع الشبكة/الحجب أو Data API endpoint.');
-  }else if(restProbe.ok && restProbe.status===401){
-    result.details.push('RESULT: Data API reachable لكن الـ API key غير مقبول.');
-  }else if(restProbe.ok && [403,404].includes(restProbe.status)){
-    result.details.push('RESULT: Data API reachable. المشكلة غالباً profiles/RLS/schema وليست Network.');
-  }else if(restProbe.ok){
-    result.details.push('RESULT: Supabase network + Data API reachable. إذا فشل Login فالمشكلة Auth user/profile أو permissions.');
-  }
+    if(error){
+      // A 401/403/PostgREST/RLS response still proves network/API connectivity.
+      if(error.code || error.status){
+        result.data=true;
+        result.details.push('Data API reachable; DB response: '+detailedError(error,'profiles'));
+      } else throw error;
+    }else{
+      result.data=true;
+      result.details.push('Data API: OK; rows='+(data?.length||0));
+    }
+  }catch(e){ result.details.push(detailedError(e,'Data API')); }
   return result;
 }
 
@@ -731,7 +696,7 @@ diagBtnV2.onclick=async()=>{
   diagOutV2.textContent='Testing...';
   try{
     const d=await runSupabaseDiagnostic();
-    diagOutV2.textContent=d.details.join('\n')+'\n\nانسخ هذه النتيجة وأرسلها لي.';
+    diagOutV2.textContent=d.details.join('\n');
   }catch(e){
     diagOutV2.textContent=detailedError(e,'diagnostic');
   }
