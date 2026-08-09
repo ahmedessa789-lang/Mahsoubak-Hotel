@@ -143,7 +143,15 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#78aeb4;box-sh
 <div id="loginView" class="login"><div class="loginbox"><h2>محسوبك للفنادق</h2><p>Mahsoobak Hotel ERP <small style="color:#059669">● Online</small></p><form id="loginForm">
 <label>اسم المستخدم / Username</label><input name="username" value="admin" required><br><br>
 <label>كلمة المرور / Password</label><input type="password" name="password" value="" required><br><br>
-<button class="primary" style="width:100%">دخول / Login</button></form></div></div>
+<button class="primary" style="width:100%">دخول / Login</button></form>
+<div id="diagBox" style="margin-top:14px;padding:12px;border:1px solid #d1d5db;border-radius:10px;background:#f8fafc;font-size:12px;line-height:1.8">
+  <div style="display:flex;justify-content:space-between;gap:8px;align-items:center">
+    <b>تشخيص الاتصال</b>
+    <button type="button" id="runDiagBtn" style="width:auto;padding:6px 10px;border:1px solid #cbd5e1;background:#fff;border-radius:8px;cursor:pointer">اختبار الآن</button>
+  </div>
+  <div id="diagStatus" style="margin-top:8px;white-space:pre-wrap">لم يتم الاختبار بعد.</div>
+</div>
+</div></div>
 <div id="appView" class="app hidden">
 <aside><h1 id="brand">محسوبك للفنادق<br><small style="font-size:11px;color:#64748b;margin-right:48px">Mahsoobak Hotel ERP</small></h1>
 <button class="nav active" data-page="dashboard" data-permission="dashboard">الرئيسية</button><button class="nav" data-page="owner" data-permission="dashboard">شاشة المالك</button><button class="nav" data-page="bookings" data-permission="bookings">الحجوزات</button><button class="nav" data-page="rooms" data-permission="rooms">الغرف</button><button class="nav" data-page="customers" data-permission="customers">العملاء</button><button class="nav" data-page="services" data-permission="services">الخدمات</button><button class="nav" data-page="meals" data-permission="meals">الوجبات</button><button class="nav" data-page="suppliers" data-permission="suppliers">الموردون</button><button class="nav" data-page="inventory" data-permission="inventory">المخازن</button><button class="nav" data-page="finance" data-permission="finance">المالية</button><button class="nav" data-page="users" data-permission="users">المستخدمون</button>
@@ -428,6 +436,69 @@ const SUPABASE_PUBLISHABLE_KEY='sb_publishable_POCsj3GoHSelETkRyB_FsQ_T1qpmnPU';
 const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
 const signupSb=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false},global:{headers:{'x-client-info':'mahsoobak-hotel-admin-signup'}}});
 
+const DIAG = {
+  lines: [],
+  push(msg, ok=null){
+    const icon = ok===true ? '✅' : ok===false ? '❌' : 'ℹ️';
+    this.lines.push(`${icon} ${msg}`);
+    if(window.diagStatus) diagStatus.textContent=this.lines.join('\n');
+  },
+  reset(){ this.lines=[]; if(window.diagStatus) diagStatus.textContent='جارِ الاختبار...'; }
+};
+
+async function runDiagnostics(){
+  DIAG.reset();
+
+  // A) Supabase JS library
+  const libOk = !!(window.supabase && typeof window.supabase.createClient==='function');
+  DIAG.push(`تحميل مكتبة Supabase JS: ${libOk ? 'ناجح' : 'فشل'}`, libOk);
+  if(!libOk) return;
+
+  DIAG.push(`Project URL المستخدم: ${SUPABASE_URL}`, null);
+
+  // B) DNS/network reachability via Auth settings endpoint
+  try{
+    const r = await fetch(`${SUPABASE_URL}/auth/v1/settings`, {
+      method:'GET',
+      headers:{'apikey':SUPABASE_PUBLISHABLE_KEY},
+      cache:'no-store'
+    });
+    DIAG.push(`الوصول إلى Supabase Auth: HTTP ${r.status}`, r.ok || r.status===401 || r.status===403);
+  }catch(e){
+    DIAG.push(`فشل الوصول إلى Supabase Auth: ${e?.name||'Error'} - ${e?.message||String(e)}`, false);
+  }
+
+  // C) Data API reachability
+  try{
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/`, {
+      method:'GET',
+      headers:{
+        'apikey':SUPABASE_PUBLISHABLE_KEY,
+        'Authorization':`Bearer ${SUPABASE_PUBLISHABLE_KEY}`
+      },
+      cache:'no-store'
+    });
+    DIAG.push(`الوصول إلى Data API: HTTP ${r.status}`, r.ok || r.status===401 || r.status===403 || r.status===404);
+  }catch(e){
+    DIAG.push(`فشل الوصول إلى Data API: ${e?.name||'Error'} - ${e?.message||String(e)}`, false);
+  }
+
+  // D) Supabase SDK session check
+  try{
+    const {data,error}=await sb.auth.getSession();
+    if(error) DIAG.push(`فحص Session: ${error.message}`, false);
+    else DIAG.push(`فحص Session: الاتصال بالـSDK ناجح${data?.session?' ويوجد Session محفوظ':' ولا يوجد Session محفوظ'}`, true);
+  }catch(e){
+    DIAG.push(`فحص Session فشل: ${e?.message||String(e)}`, false);
+  }
+
+  DIAG.push('بعد الاختبار جرّب Login. لو فشل، الرسالة التالية ستوضح هل المشكلة Network أم Auth.', null);
+}
+
+if(window.runDiagBtn) runDiagBtn.onclick=runDiagnostics;
+setTimeout(()=>{ if(window.diagStatus) runDiagnostics(); }, 500);
+
+
 function apiErr(e){throw Error(e?.message||e?.details||e?.hint||String(e||'Error'))}
 function num(v){return Number(v||0)}
 function qdate(v){return v?String(v).slice(0,10):''}
@@ -626,7 +697,23 @@ try{
   userInfo.textContent=me.full_name+' - '+me.role;
   showApp();
   loadAll();
-}catch(x){alert(x.message)}
+}catch(x){
+  const msg = x?.message || String(x);
+  let hint = '';
+  if(/failed to fetch|network|load failed/i.test(msg)){
+    hint = '\n\nالتشخيص: الطلب لم يصل إلى Supabase. اضغط \"اختبار الآن\" وانسخ النتيجة.';
+  }else if(/invalid login credentials/i.test(msg)){
+    hint = '\n\nالتشخيص: الاتصال ناجح لكن البريد/كلمة المرور غير صحيحين.';
+  }else if(/email not confirmed/i.test(msg)){
+    hint = '\n\nالتشخيص: الاتصال ناجح لكن البريد يحتاج تأكيد.';
+  }else{
+    hint = '\n\nالتشخيص: الاتصال وصل إلى Supabase لكن رجع خطأ آخر.';
+  }
+  if(window.diagStatus){
+    diagStatus.textContent += `\n\n❌ نتيجة محاولة الدخول: ${msg}${hint}`;
+  }
+  alert(msg + hint);
+}
 }
 logoutBtn.onclick=async()=>{await api('/api/logout',{method:'POST'});showLogin()}
 document.querySelectorAll('.nav').forEach(b=>b.onclick=()=>{document.querySelectorAll('.nav').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.getElementById(b.dataset.page).classList.add('active');pageTitle.textContent=b.textContent})
