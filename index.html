@@ -140,7 +140,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#78aeb4;box-sh
 @media(max-width:1000px){.dashboard-shell{grid-template-columns:1fr}}
 
 </style></head><body>
-<div id="loginView" class="login"><div class="loginbox"><h2>محسوبك للفنادق</h2><p>Mahsoobak Hotel ERP <small style="color:#059669">● Online</small></p><form id="loginForm">
+<div id="loginView" class="login"><div class="loginbox"><h2>محسوبك للفنادق</h2><p>Mahsoobak Hotel ERP <small style="color:#059669">● Online</small><br><small style="color:#64748b">Build: URL-FIX-v3</small></p><form id="loginForm">
 <label>اسم المستخدم / Username</label><input name="username" value="admin" required><br><br>
 <label>كلمة المرور / Password</label><input type="password" name="password" value="" required><br><br>
 <button class="primary" style="width:100%">دخول / Login</button></form>
@@ -457,7 +457,7 @@ function detailedError(e,stage='Supabase'){
 async function runSupabaseDiagnostic(){
   const result={sdk:false,auth:false,data:false,session:false,details:[]};
   result.sdk=!!(window.supabase&&window.supabase.createClient);
-  result.details.push('SDK: '+(result.sdk?'OK':'FAILED'));
+  result.details.push('Build: URL-FIX-v3'); result.details.push('SDK: '+(result.sdk?'OK':'FAILED'));
   try{
     const {data,error}=await sb.auth.getSession();
     if(error) throw error;
