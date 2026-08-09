@@ -140,7 +140,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#78aeb4;box-sh
 @media(max-width:1000px){.dashboard-shell{grid-template-columns:1fr}}
 
 </style></head><body>
-<div id="loginView" class="login"><div class="loginbox"><h2>محسوبك للفنادق</h2><p>Mahsoobak Hotel ERP <small style="color:#059669">● Online</small><br><small style="color:#64748b">Build: URL-FIX-v3</small></p><form id="loginForm">
+<div id="loginView" class="login"><div class="loginbox"><h2>محسوبك للفنادق</h2><p>Mahsoobak Hotel ERP <small style="color:#059669">● Online</small></p><form id="loginForm">
 <label>اسم المستخدم / Username</label><input name="username" value="admin" required><br><br>
 <label>كلمة المرور / Password</label><input type="password" name="password" value="" required><br><br>
 <button class="primary" style="width:100%">دخول / Login</button></form>
@@ -452,33 +452,6 @@ function detailedError(e,stage='Supabase'){
   return parts.join(' | ');
 }
 
-async function runSupabaseDiagnostic(){
-  const result={sdk:false,auth:false,data:false,session:false,details:[]};
-  result.sdk=!!(window.supabase&&window.supabase.createClient);
-  result.details.push('Build: URL-FIX-v3'); result.details.push('SDK: '+(result.sdk?'OK':'FAILED'));
-  try{
-    const {data,error}=await sb.auth.getSession();
-    if(error) throw error;
-    result.auth=true;
-    result.session=!!data?.session;
-    result.details.push('Auth endpoint: OK; session='+(result.session?'YES':'NO'));
-  }catch(e){ result.details.push(detailedError(e,'Auth endpoint')); }
-  try{
-    const {data,error}=await sb.from('profiles').select('id').limit(1);
-    if(error){
-      // A 401/403/PostgREST/RLS response still proves network/API connectivity.
-      if(error.code || error.status){
-        result.data=true;
-        result.details.push('Data API reachable; DB response: '+detailedError(error,'profiles'));
-      } else throw error;
-    }else{
-      result.data=true;
-      result.details.push('Data API: OK; rows='+(data?.length||0));
-    }
-  }catch(e){ result.details.push(detailedError(e,'Data API')); }
-  return result;
-}
-
 
 function apiErr(e){throw Error(e?.message||e?.details||e?.hint||String(e||'Error'))}
 function num(v){return Number(v||0)}
@@ -592,10 +565,19 @@ async function cashFlowData(params){
 }
 
 const simpleMap={'/api/rooms':'rooms','/api/customers':'customers','/api/suppliers':'suppliers','/api/services':'services','/api/meal-plans':'meal_plans','/api/warehouses':'warehouses','/api/items':'items','/api/stock-movements':'stock_movements','/api/cashboxes':'cashboxes','/api/finance/accounts':'accounts'};
+function authEmailFromUsername(value){
+  const v=(value||'').trim().toLowerCase();
+  if(!v)throw Error('اكتب اسم المستخدم');
+  if(v==='admin')return 'yamani@hotel.com';
+  if(v.includes('@'))return v;
+  // Internal login alias: the employee only needs to know the username, not an email.
+  return `${v}@mahsoobak-hotel.local`;
+}
+
 const api=async(u,o={})=>{
   const method=(o.method||'GET').toUpperCase(),body=parsePayload(o),{path,params}=parseUrl(u);
   if(path==='/api/login'&&method==='POST'){
-    let email=(body.username||'').trim().toLowerCase();if(email==='admin')email='yamani@hotel.com';
+    const email=authEmailFromUsername(body.username);
     const {data,error}=await sb.auth.signInWithPassword({email,password:body.password});if(error)apiErr(error);return {ok:true,user:data.user};
   }
   if(path==='/api/logout'){const {error}=await sb.auth.signOut();if(error)apiErr(error);return {ok:true}}
@@ -634,8 +616,48 @@ const api=async(u,o={})=>{
     const {data,error}=await sb.from('profiles').select('*').order('created_at',{ascending:true});if(error)apiErr(error);return data||[];
   }
   if(path==='/api/users'&&method==='POST'){
-    let email=(body.username||'').trim().toLowerCase();if(!email.includes('@'))throw Error('اكتب البريد الإلكتروني في خانة اسم المستخدم عند إنشاء مستخدم جديد');
-    const {data,error}=await signupSb.auth.signUp({email,password:body.password,options:{data:{full_name:body.full_name,username:email.split('@')[0],role:body.role,permissions:body.permissions||[]}}});if(error)apiErr(error);return {id:data.user?.id,full_name:body.full_name,username:email.split('@')[0],email,role:body.role,permissions:body.permissions||[],is_active:true};
+    const username=(body.username||'').trim().toLowerCase();
+    if(!username)throw Error('اكتب اسم المستخدم');
+    if(!body.password || String(body.password).length<6)throw Error('كلمة المرور يجب ألا تقل عن 6 أحرف');
+    const email=authEmailFromUsername(username);
+
+    // Prevent duplicate usernames in the application's profile table.
+    const {data:existing,error:existingErr}=await sb.from('profiles')
+      .select('id,username,email')
+      .or(`username.eq.${username},email.eq.${email}`)
+      .limit(1);
+    if(existingErr)apiErr(existingErr);
+    if(existing && existing.length)throw Error('اسم المستخدم موجود بالفعل');
+
+    // Create the Supabase Auth account using a separate client so the current Admin session stays logged in.
+    const {data,error}=await signupSb.auth.signUp({
+      email,
+      password:body.password,
+      options:{data:{
+        full_name:body.full_name,
+        username,
+        role:body.role,
+        permissions:body.permissions||[]
+      }}
+    });
+    if(error)apiErr(error);
+    const uid=data.user?.id;
+    if(!uid)throw Error('لم يتم إنشاء حساب الدخول في Supabase Auth');
+
+    // Ensure the app profile exists and contains the selected role/permissions.
+    const profile={
+      id:uid,
+      full_name:body.full_name||username,
+      username,
+      email,
+      role:body.role||'Reception',
+      permissions:body.permissions||[],
+      is_active:true
+    };
+    const {error:profileErr}=await sb.from('profiles').upsert(profile,{onConflict:'id'});
+    if(profileErr)apiErr(profileErr);
+
+    return profile;
   }
   m=path.match(/^\/api\/users\/([0-9a-f-]+)$/i);if(m){if(method==='DELETE')return upd('profiles',m[1],{is_active:false});if(method==='PUT'){const p={...body};delete p.password;if(p.username&&p.username.includes('@')){p.email=p.username;p.username=p.username.split('@')[0]}return upd('profiles',m[1],p)}}
   m=path.match(/^\/api\/users\/([0-9a-f-]+)\/reset-password$/i);if(m&&method==='POST'){const {data:{user}}=await sb.auth.getUser();if(user?.id===m[1]){const {error}=await sb.auth.updateUser({password:body.password});if(error)apiErr(error);return {ok:true}}throw Error('تغيير كلمة مرور مستخدم آخر يحتاج رسالة Reset Password من Supabase Auth')}
@@ -678,27 +700,7 @@ try{
   userInfo.textContent=me.full_name+' - '+me.role;
   showApp();
   loadAll();
-}catch(x){
-  let extra='';
-  try{
-    const d=await runSupabaseDiagnostic();
-    extra='\n\nتشخيص الاتصال:\n'+d.details.join('\n');
-  }catch(diagErr){
-    extra='\n\nDiagnostic failed: '+detailedError(diagErr,'diagnostic');
-  }
-  alert('Login failed: '+detailedError(x,'login')+extra);
-}
-}
-if(window.diagBtnV2){
-diagBtnV2.onclick=async()=>{
-  diagOutV2.textContent='Testing...';
-  try{
-    const d=await runSupabaseDiagnostic();
-    diagOutV2.textContent=d.details.join('\n');
-  }catch(e){
-    diagOutV2.textContent=detailedError(e,'diagnostic');
-  }
-};
+}catch(x){alert(x?.message||'Login failed')}
 }
 logoutBtn.onclick=async()=>{await api('/api/logout',{method:'POST'});showLogin()}
 document.querySelectorAll('.nav').forEach(b=>b.onclick=()=>{document.querySelectorAll('.nav').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.getElementById(b.dataset.page).classList.add('active');pageTitle.textContent=b.textContent})
@@ -736,6 +738,9 @@ else if(type==='stock'){await Promise.all([loadWarehouses(),loadItems(),loadSupp
 else {
   formFields.innerHTML=defs[type].map(x=>field(...x)).join('');
   if(type==='user'){
+    formFields.innerHTML = `<div style="grid-column:1/-1;background:#f8fafc;border:1px solid #e5e7eb;border-radius:10px;padding:10px;font-size:12px">
+      اكتب اسم مستخدم بسيط مثل <b>abdelrahman</b> وكلمة مرور. سيتم إنشاء حساب الدخول في Supabase تلقائيًا.
+    </div>` + formFields.innerHTML;
     formFields.innerHTML += `<div><label>الدور</label><select name="role">
       <option value="Reception">استقبال</option>
       <option value="Accountant">محاسب</option>
