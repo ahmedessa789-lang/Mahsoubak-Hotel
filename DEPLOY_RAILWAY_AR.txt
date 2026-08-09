@@ -1,0 +1,22 @@
+محسوبك للفنادق - تجهيز Railway
+================================
+
+النسخة دي جاهزة للرفع على GitHub ثم Railway.
+
+1) ارفع محتويات هذا المجلد إلى GitHub Repository جديد.
+2) في Railway: New Project > Deploy from GitHub Repo > اختر الـ Repository.
+3) بعد إنشاء الـ Service أضف Volume واربطه بالـ Service على المسار:
+   /data
+4) من Variables أضف:
+   MAHSOOBAK_DATA_DIR=/data
+   SESSION_HTTPS_ONLY=1
+   SESSION_SECRET=<ضع قيمة طويلة وعشوائية ولا تشاركها>
+5) Railway سيستخدم railway.toml ويشغل:
+   uvicorn app.main:app --host 0.0.0.0 --port $PORT
+6) من Settings > Networking اعمل Generate Domain.
+7) افتح الرابط وسجل دخولك.
+
+مهم:
+- لا تحذف الـ Volume بعد بدء استخدام العميل للنظام، لأنه يحتوي قاعدة SQLite الدائمة.
+- ملف قاعدة البيانات الموجود داخل المشروع يستخدم فقط كبذرة أول تشغيل إذا كان الـ Volume فارغاً.
+- للاستخدام الأكبر أو عدد مستخدمين متزامنين أعلى، يمكن نقل DATABASE_URL لاحقاً إلى PostgreSQL بدون تغيير الواجهة.
