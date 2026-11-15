@@ -1,0 +1,35 @@
+name: Desert Rose — Sync CBE USD/EGP rate
+
+on:
+  workflow_dispatch:
+  schedule:
+    # 13:27 UTC = 15:27 Cairo winter / 16:27 Cairo summer.
+    # After CBE's usual afternoon publication; on closed days keep prior rate date.
+    - cron: '27 13 * * *'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: desert-rose-cbe-fx
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Parser dependency
+        run: python -m pip install --disable-pip-version-check 'beautifulsoup4>=4.12,<5'
+      - name: Fetch published CBE rate and update Supabase
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVER_KEY: ${{ secrets.SUPABASE_SERVER_KEY }}
+          CBE_REPUBLISHER_API_KEY: ${{ secrets.CBE_REPUBLISHER_API_KEY }}
+        run: python scripts/sync_cbe_rate.py
